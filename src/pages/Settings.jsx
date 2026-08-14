@@ -82,13 +82,6 @@ function Settings() {
 
   const items = [
     {
-      key: "aiGuidance",
-      title: "AI Guidance",
-      description:
-        "Enable step-by-step guidance during checklist execution.",
-      icon: Monitor,
-    },
-    {
       key: "notifications",
       title: "Notifications",
       description:

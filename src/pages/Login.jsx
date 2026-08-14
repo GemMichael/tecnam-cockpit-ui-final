@@ -247,7 +247,7 @@ function Login() {
               </button>
 
               <p className="mt-6 text-center text-xs text-slate-400">
-                Frontend demonstration mode — authentication
+                Frontend demonstration mode, authentication
                 database will be connected later.
               </p>
             </div>

@@ -1,0 +1,586 @@
+export const checklists = [
+  {
+    id: "cockpit-inspection",
+    title: "Cockpit Inspection",
+    phase: "Pre-Flight",
+    description:
+      "Cockpit preparation, controls, electrical system and initial communication.",
+    duration: "8–12 min",
+    difficulty: "Beginner",
+    steps: [
+      {
+        id: "parking-brake",
+        title: "Parking Brakes",
+        instruction: "Ensure the parking brakes are engaged.",
+        expected: "Parking brakes engaged",
+        control: "parking_brake",
+      },
+      {
+        id: "arrow",
+        title: "Aircraft Documents",
+        instruction: "Verify the required aircraft documents are onboard.",
+        expected: "ARROW onboard",
+        control: "manual_check",
+      },
+      {
+        id: "flight-controls",
+        title: "Flight Controls",
+        instruction:
+          "Check that the flight controls are free and correct.",
+        expected: "Flight controls free and correct",
+        control: "flight_controls",
+      },
+      {
+        id: "master",
+        title: "Master Switch",
+        instruction: "Turn the master switch ON.",
+        expected: "Master switch ON",
+        control: "master_switch",
+      },
+      {
+        id: "fuel-pump-on",
+        title: "Electric Fuel Pump",
+        instruction:
+          "Turn the electric fuel pump ON and verify pressure increases.",
+        expected: "Fuel pressure increasing",
+        control: "fuel_pump",
+      },
+      {
+        id: "fuel-pump-off",
+        title: "Fuel Pump OFF",
+        instruction: "Turn the electric fuel pump OFF.",
+        expected: "Electric fuel pump OFF",
+        control: "fuel_pump",
+      },
+      {
+        id: "flaps",
+        title: "Flaps",
+        instruction:
+          "Perform the flap check and place the flaps in takeoff position.",
+        expected: "Flaps checked",
+        control: "flaps",
+      },
+      {
+        id: "trim",
+        title: "Trim",
+        instruction: "Set the trim to neutral.",
+        expected: "Trim neutral",
+        control: "trim",
+      },
+      {
+        id: "avionics",
+        title: "Avionics Master",
+        instruction: "Turn the avionics master ON.",
+        expected: "Avionics master ON",
+        control: "avionics_master",
+      },
+      {
+        id: "radio",
+        title: "Radio Communication",
+        instruction:
+          "Complete the required startup communication.",
+        expected: "Correct radio communication",
+        control: "ai_comms",
+      },
+    ],
+  },
+
+  {
+    id: "engine-starting",
+    title: "Engine Starting",
+    phase: "Engine",
+    description:
+      "Complete the Tecnam engine starting procedure step by step.",
+    duration: "6–10 min",
+    difficulty: "Intermediate",
+    steps: [
+      {
+        id: "chronometer",
+        title: "Chronometer",
+        instruction: "Start the chronometer / clock.",
+        expected: "Chronometer started",
+        control: "chronometer",
+      },
+      {
+        id: "voltmeter-12",
+        title: "Voltmeter",
+        instruction: "Verify approximately 12 volts.",
+        expected: "12 volts checked",
+        control: "instrument_check",
+      },
+      {
+        id: "ammeter",
+        title: "Ammeter",
+        instruction: "Check the ammeter.",
+        expected: "Ammeter checked",
+        control: "instrument_check",
+      },
+      {
+        id: "throttle-idle",
+        title: "Throttle",
+        instruction: "Set the throttle to idle.",
+        expected: "Throttle idle",
+        control: "throttle",
+      },
+      {
+        id: "fuel-selector",
+        title: "Fuel Selector",
+        instruction: "Set the required fuel tank.",
+        expected: "Fuel selector checked",
+        control: "fuel_selector",
+      },
+      {
+        id: "electric-pump",
+        title: "Electric Fuel Pump",
+        instruction:
+          "Turn the fuel pump ON and check increasing fuel pressure.",
+        expected: "Fuel pressure increasing",
+        control: "fuel_pump",
+      },
+      {
+        id: "prop-clear",
+        title: "Propeller Area",
+        instruction: "Confirm the propeller area is clear.",
+        expected: "Prop clear",
+        control: "manual_check",
+      },
+      {
+        id: "nav-strobe",
+        title: "Navigation & Strobe",
+        instruction:
+          "Turn navigation and strobe lights ON.",
+        expected: "Nav and strobe ON",
+        control: "lights",
+      },
+      {
+        id: "ignition",
+        title: "Ignition",
+        instruction: "Perform the ignition/start procedure.",
+        expected: "Engine started",
+        control: "ignition",
+      },
+      {
+        id: "oil-pressure",
+        title: "Oil Pressure",
+        instruction: "Check oil pressure indication.",
+        expected: "Oil pressure green",
+        control: "instrument_check",
+      },
+      {
+        id: "generator",
+        title: "Generator",
+        instruction: "Turn the generator ON.",
+        expected: "Generator ON",
+        control: "generator",
+      },
+      {
+        id: "charging",
+        title: "Ammeter Charging",
+        instruction:
+          "Verify the ammeter indicates charging.",
+        expected: "Ammeter charging",
+        control: "instrument_check",
+      },
+      {
+        id: "voltmeter-14",
+        title: "Voltmeter",
+        instruction: "Verify approximately 14 volts.",
+        expected: "14 volts checked",
+        control: "instrument_check",
+      },
+      {
+        id: "engine-instruments",
+        title: "Engine Instruments",
+        instruction:
+          "Check engine instruments and suction indication.",
+        expected: "Engine instruments green",
+        control: "instrument_check",
+      },
+      {
+        id: "power-1000",
+        title: "Engine RPM",
+        instruction:
+          "Set engine power between 1,000 and 1,200 RPM.",
+        expected: "1,000–1,200 RPM",
+        control: "throttle",
+      },
+      {
+        id: "pump-off",
+        title: "Electric Fuel Pump OFF",
+        instruction: "Turn the electric fuel pump OFF.",
+        expected: "Fuel pump OFF",
+        control: "fuel_pump",
+      },
+    ],
+  },
+
+  {
+    id: "before-taxi",
+    title: "Before Taxi",
+    phase: "Taxi",
+    description:
+      "Configure avionics, instruments and prepare for taxi.",
+    duration: "5–8 min",
+    difficulty: "Intermediate",
+    steps: [
+      {
+        id: "avionics",
+        title: "Avionics Master",
+        instruction: "Turn avionics master ON.",
+        expected: "Avionics ON",
+        control: "avionics_master",
+      },
+      {
+        id: "intercom",
+        title: "Intercom",
+        instruction: "Turn intercom ON.",
+        expected: "Intercom ON",
+        control: "intercom",
+      },
+      {
+        id: "radio-vor",
+        title: "Radios & VOR",
+        instruction: "Set radios and VOR.",
+        expected: "Radios configured",
+        control: "radio",
+      },
+      {
+        id: "transponder",
+        title: "Transponder",
+        instruction: "Set transponder to standby.",
+        expected: "Transponder STBY",
+        control: "transponder",
+      },
+      {
+        id: "gps",
+        title: "GPS",
+        instruction: "Set the GPS.",
+        expected: "GPS configured",
+        control: "gps",
+      },
+      {
+        id: "instruments",
+        title: "Aircraft Instruments",
+        instruction:
+          "Perform the required aircraft instrument check.",
+        expected: "Aircraft instruments checked",
+        control: "instrument_check",
+      },
+      {
+        id: "taxi-comms",
+        title: "Taxi Communication",
+        instruction:
+          "Complete the required radio call and readback.",
+        expected: "Taxi clearance read back",
+        control: "ai_comms",
+      },
+      {
+        id: "brakes",
+        title: "Brake Check",
+        instruction:
+          "Release parking brakes and perform brake check.",
+        expected: "Brakes checked",
+        control: "parking_brake",
+      },
+    ],
+  },
+
+  {
+    id: "run-up",
+    title: "Run-Up",
+    phase: "Run-Up",
+    description:
+      "Verify engine parameters and perform the run-up procedure.",
+    duration: "8–12 min",
+    difficulty: "Advanced",
+    steps: [
+      {
+        id: "brakes",
+        title: "Parking Brakes",
+        instruction: "Engage parking brakes.",
+        expected: "Parking brakes engaged",
+        control: "parking_brake",
+      },
+      {
+        id: "oil-temp",
+        title: "Oil Temperature",
+        instruction: "Check oil temperature.",
+        expected: "Oil temperature green",
+        control: "instrument_check",
+      },
+      {
+        id: "cht",
+        title: "Cylinder Head Temperature",
+        instruction: "Check cylinder head temperature.",
+        expected: "CHT checked",
+        control: "instrument_check",
+      },
+      {
+        id: "oil-pressure",
+        title: "Oil Pressure",
+        instruction: "Check oil pressure.",
+        expected: "Oil pressure green",
+        control: "instrument_check",
+      },
+      {
+        id: "fuel-pressure",
+        title: "Fuel Pressure",
+        instruction: "Check fuel pressure.",
+        expected: "Fuel pressure green",
+        control: "instrument_check",
+      },
+      {
+        id: "generator",
+        title: "Generator Light",
+        instruction: "Perform generator light check.",
+        expected: "Generator check complete",
+        control: "generator",
+      },
+      {
+        id: "fuel-selector",
+        title: "Fuel Selector",
+        instruction: "Select the fullest tank.",
+        expected: "Fullest tank selected",
+        control: "fuel_selector",
+      },
+      {
+        id: "rpm",
+        title: "Power",
+        instruction: "Set power for the ignition check.",
+        expected: "Run-up RPM set",
+        control: "throttle",
+      },
+      {
+        id: "ignition",
+        title: "Ignition Check",
+        instruction: "Perform the ignition/magneto check.",
+        expected: "Ignition check complete",
+        control: "ignition",
+      },
+      {
+        id: "carb",
+        title: "Carburetor Heat",
+        instruction: "Perform carburetor heat check.",
+        expected: "Carb heat checked",
+        control: "carb_heat",
+      },
+    ],
+  },
+
+  {
+    id: "before-takeoff",
+    title: "Before Takeoff",
+    phase: "Takeoff",
+    description:
+      "Final configuration and checks prior to runway entry.",
+    duration: "5–8 min",
+    difficulty: "Advanced",
+    steps: [
+      {
+        id: "brakes",
+        title: "Parking Brakes",
+        instruction: "Engage parking brakes.",
+        expected: "Parking brakes engaged",
+        control: "parking_brake",
+      },
+      {
+        id: "transponder",
+        title: "Transponder",
+        instruction: "Set transponder to ALT.",
+        expected: "Transponder ALT",
+        control: "transponder",
+      },
+      {
+        id: "landing",
+        title: "Landing Lights",
+        instruction: "Turn landing lights ON.",
+        expected: "Landing lights ON",
+        control: "lights",
+      },
+      {
+        id: "flaps",
+        title: "Flaps",
+        instruction: "Check takeoff flap position.",
+        expected: "Takeoff flaps checked",
+        control: "flaps",
+      },
+      {
+        id: "pump",
+        title: "Electric Fuel Pump",
+        instruction: "Turn electric fuel pump ON.",
+        expected: "Fuel pump ON",
+        control: "fuel_pump",
+      },
+      {
+        id: "controls",
+        title: "Flight Controls",
+        instruction:
+          "Confirm flight controls are free and correct.",
+        expected: "Controls free and correct",
+        control: "flight_controls",
+      },
+      {
+        id: "trim",
+        title: "Trim",
+        instruction: "Set trim neutral.",
+        expected: "Trim neutral",
+        control: "trim",
+      },
+      {
+        id: "canopy",
+        title: "Canopy",
+        instruction: "Ensure canopy is closed.",
+        expected: "Canopy closed",
+        control: "canopy",
+      },
+      {
+        id: "line-up",
+        title: "Line-Up Communication",
+        instruction:
+          "Complete the required holding-point radio call.",
+        expected: "Radio call correct",
+        control: "ai_comms",
+      },
+    ],
+  },
+
+  {
+    id: "after-landing",
+    title: "After Landing",
+    phase: "Landing",
+    description:
+      "Configure the aircraft after leaving the runway.",
+    duration: "3–5 min",
+    difficulty: "Beginner",
+    steps: [
+      {
+        id: "transponder",
+        title: "Transponder",
+        instruction: "Set transponder to standby.",
+        expected: "Transponder standby",
+        control: "transponder",
+      },
+      {
+        id: "landing",
+        title: "Landing Light",
+        instruction: "Verify landing light state.",
+        expected: "Landing light checked",
+        control: "lights",
+      },
+      {
+        id: "flaps",
+        title: "Flaps",
+        instruction: "Retract flaps.",
+        expected: "Flaps UP",
+        control: "flaps",
+      },
+      {
+        id: "pump",
+        title: "Electric Fuel Pump",
+        instruction: "Turn electric fuel pump OFF.",
+        expected: "Fuel pump OFF",
+        control: "fuel_pump",
+      },
+    ],
+  },
+
+  {
+    id: "engine-shutdown",
+    title: "Engine Shutdown",
+    phase: "Shutdown",
+    description:
+      "Safely complete the engine shutdown procedure.",
+    duration: "5–8 min",
+    difficulty: "Intermediate",
+    steps: [
+      {
+        id: "brakes",
+        title: "Parking Brakes",
+        instruction: "Engage parking brakes.",
+        expected: "Brakes engaged",
+        control: "parking_brake",
+      },
+      {
+        id: "throttle",
+        title: "Throttle",
+        instruction: "Set throttle to idle when required.",
+        expected: "Throttle idle",
+        control: "throttle",
+      },
+      {
+        id: "radio",
+        title: "Radios",
+        instruction: "Turn radios OFF.",
+        expected: "Radio OFF",
+        control: "radio",
+      },
+      {
+        id: "intercom",
+        title: "Intercom",
+        instruction: "Turn intercom OFF.",
+        expected: "Intercom OFF",
+        control: "intercom",
+      },
+      {
+        id: "avionics",
+        title: "Avionics Master",
+        instruction: "Turn avionics master OFF.",
+        expected: "Avionics OFF",
+        control: "avionics_master",
+      },
+      {
+        id: "transponder",
+        title: "Transponder",
+        instruction: "Set transponder OFF.",
+        expected: "Transponder OFF",
+        control: "transponder",
+      },
+      {
+        id: "gps",
+        title: "GPS",
+        instruction: "Turn GPS OFF.",
+        expected: "GPS OFF",
+        control: "gps",
+      },
+      {
+        id: "ignition",
+        title: "Ignition",
+        instruction: "Complete ignition shutdown.",
+        expected: "Ignition OFF",
+        control: "ignition",
+      },
+      {
+        id: "lights",
+        title: "Navigation & Strobe",
+        instruction: "Turn navigation and strobe lights OFF.",
+        expected: "Lights OFF",
+        control: "lights",
+      },
+      {
+        id: "generator",
+        title: "Generator",
+        instruction: "Turn generator OFF.",
+        expected: "Generator OFF",
+        control: "generator",
+      },
+      {
+        id: "master",
+        title: "Master Switch",
+        instruction: "Turn master switch OFF.",
+        expected: "Master OFF",
+        control: "master_switch",
+      },
+      {
+        id: "fuel-selector",
+        title: "Fuel Selector",
+        instruction: "Set fuel selector OFF.",
+        expected: "Fuel selector OFF",
+        control: "fuel_selector",
+      },
+    ],
+  },
+];
+
+export function getChecklistById(id) {
+  return checklists.find((checklist) => checklist.id === id);
+}

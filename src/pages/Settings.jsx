@@ -89,20 +89,6 @@ function Settings() {
       icon: Monitor,
     },
     {
-      key: "audioInstructions",
-      title: "Audio Instructions",
-      description:
-        "Allow spoken checklist instructions through the headset.",
-      icon: Volume2,
-    },
-    {
-      key: "microphone",
-      title: "Microphone",
-      description:
-        "Enable microphone access for future ATC communication analysis.",
-      icon: Mic2,
-    },
-    {
       key: "notifications",
       title: "Notifications",
       description:

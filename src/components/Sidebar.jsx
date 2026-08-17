@@ -8,6 +8,7 @@ import {
   LogOut,
   Plane,
   Settings,
+  SlidersHorizontal,
   Trophy,
 } from "lucide-react";
 
@@ -19,6 +20,15 @@ export const navigationItems = [
     path: "/dashboard",
     icon: LayoutDashboard,
   },
+
+  // NEW: Virtual cockpit controls
+  // Later, these controls will also receive states from Raspberry Pi GPIO.
+  {
+    label: "Cockpit Controls",
+    path: "/controls",
+    icon: SlidersHorizontal,
+  },
+
   {
     label: "Choose Checklist",
     path: "/checklists",
@@ -66,7 +76,9 @@ function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-72 flex-col border-r border-white/10 bg-[#08233f] text-white lg:flex">
-      {/* Branding */}
+      {/* =========================================================
+          BRANDING
+          ========================================================= */}
       <div className="border-b border-white/10 p-7">
         <div className="flex items-center gap-3">
           <div className="rounded-2xl bg-blue-500/20 p-3 text-blue-300">
@@ -89,7 +101,9 @@ function Sidebar() {
         </p>
       </div>
 
-      {/* Navigation */}
+      {/* =========================================================
+          NAVIGATION
+          ========================================================= */}
       <nav className="flex-1 space-y-2 overflow-y-auto p-4">
         {navigationItems.map((item) => {
           const Icon = item.icon;
@@ -108,13 +122,20 @@ function Sidebar() {
               }
             >
               <Icon size={19} />
+
               {item.label}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* Future aircraft photo */}
+      {/* =========================================================
+          AIRCRAFT IMAGE
+
+          Later put your image here:
+
+          public/images/tecnam-hero.jpg
+          ========================================================= */}
       <div className="px-5 pb-4">
         <div
           className="h-32 rounded-3xl border border-white/10 bg-cover bg-center"
@@ -128,9 +149,11 @@ function Sidebar() {
               <p className="text-xs font-semibold">
                 WCC Aeronautical &
               </p>
+
               <p className="text-xs text-slate-300">
                 Technological College
               </p>
+
               <p className="text-xs text-slate-400">
                 Binalonan
               </p>
@@ -139,6 +162,12 @@ function Sidebar() {
         </div>
       </div>
 
+      {/* =========================================================
+          LOGOUT
+
+          We are not working on authentication yet.
+          This can stay here for now.
+          ========================================================= */}
       <button
         onClick={logout}
         className="m-4 flex items-center gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-300 transition hover:bg-red-500/10 hover:text-red-300"

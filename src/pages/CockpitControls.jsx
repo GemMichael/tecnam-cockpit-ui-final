@@ -227,11 +227,11 @@ function CockpitControlsPage() {
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-blue-600">
-            TECNAM P2002JF
+            TECNAM P2002JF(Testing speech to text accuracy in local host environment. Don’t forget to revert the changes once testing is complete. Pull the lastest push from github.)
           </p>
 
           <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
-            Cockpit Controls
+            Cockpit Controls(Note: switches set to high position(hardware))
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">

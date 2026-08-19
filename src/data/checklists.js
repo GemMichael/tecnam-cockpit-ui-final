@@ -1379,7 +1379,7 @@ export const checklists = [
           "Ignition Switch Check",
 
         instruction:
-          "Check the RIGHT magneto, return to BOTH, check the LEFT magneto, then return to BOTH. The checklist indicates an RPM drop of 40 and no difference.",
+          "check the left magnetos, read rpm drop, then return to both. Check the right magneto, read rpm drop then return to both. Read the total rpm of both and the difference.",
 
         controlId:
           "ignition",

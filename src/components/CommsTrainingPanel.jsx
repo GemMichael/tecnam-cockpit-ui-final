@@ -1,10 +1,10 @@
 import {
   Check,
   CheckCircle2,
-  Mic,
   Radio,
   RotateCcw,
-  Send,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 
@@ -18,14 +18,24 @@ import {
   getCommsScenario,
 } from "../data/commsScenarios";
 
+import {
+  getAtcRetryResponse,
+} from "../data/commsRetryResponses";
+
+import {
+  speakAtc,
+  stopAtcSpeech,
+} from "../services/atcVoice";
+
+import PushToTalkButton from "./PushToTalkButton";
+
 
 function CommsTrainingPanel({
   scenarioId,
   onComplete,
 }) {
-
   /* ==========================================================
-     LOAD SCENARIO
+     LOAD COMMUNICATION SCENARIO
      ========================================================== */
 
   const scenario =
@@ -47,20 +57,24 @@ function CommsTrainingPanel({
     setStageIndex,
   ] = useState(0);
 
+
   const [
     transcript,
     setTranscript,
   ] = useState("");
+
 
   const [
     result,
     setResult,
   ] = useState(null);
 
+
   const [
     lastAtcResponse,
     setLastAtcResponse,
   ] = useState(null);
+
 
   const [
     complete,
@@ -68,11 +82,24 @@ function CommsTrainingPanel({
   ] = useState(false);
 
 
+  const [
+    isAtcSpeaking,
+    setIsAtcSpeaking,
+  ] = useState(false);
+
+
+  const [
+    atcVoiceError,
+    setAtcVoiceError,
+  ] = useState(null);
+
+
   /* ==========================================================
      RESET WHEN SCENARIO CHANGES
      ========================================================== */
 
   useEffect(() => {
+    stopAtcSpeech();
 
     setStageIndex(0);
 
@@ -86,6 +113,14 @@ function CommsTrainingPanel({
 
     setComplete(false);
 
+    setIsAtcSpeaking(false);
+
+    setAtcVoiceError(null);
+
+
+    return () => {
+      stopAtcSpeech();
+    };
   }, [scenarioId]);
 
 
@@ -96,7 +131,6 @@ function CommsTrainingPanel({
   if (!scenario) {
     return (
       <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4">
-
         <p className="text-sm font-bold text-red-700">
           Communication scenario not found.
         </p>
@@ -104,37 +138,281 @@ function CommsTrainingPanel({
         <p className="mt-1 text-xs text-red-500">
           Scenario: {scenarioId}
         </p>
-
       </div>
     );
   }
 
 
+  /* ==========================================================
+     CURRENT SCENARIO / STAGE
+     ========================================================== */
+
   const stages =
     scenario.stages;
 
+
   const currentStage =
     stages[
-      stageIndex
+    stageIndex
     ];
 
 
   /* ==========================================================
-     EVALUATE TRANSMISSION
+     SPEECH RECOGNITION CONTEXT
+
+     This helps Whisper recognize the aviation vocabulary that
+     appears throughout the checklist.
+
+     It does NOT automatically mark anything correct.
+     Your commsScenarios.js validator still decides correctness.
      ========================================================== */
 
-  function evaluateTransmission() {
+  const speechRecognitionPrompt =
+    useMemo(() => {
+
+      switch (
+      currentStage?.id
+      ) {
+
+        case "startup-greeting":
+          return `
+This is an aviation radio transmission at Binalonan Airport.
+
+The radio station name is Binalonan Radio.
+Binalonan is spelled B I N A L O N A N.
+The speaker will say: Binalonan Radio.
+
+Aircraft callsign is RP-C1234.
+
+Expected aviation vocabulary:
+Binalonan Radio,
+RP-C1234,
+good morning.
+`;
+
+
+        case "startup-request":
+          return `
+This is an aviation radio transmission at Binalonan Airport.
+
+The radio station name is Binalonan Radio.
+Binalonan is spelled B I N A L O N A N.
+The speaker will say: Binalonan Radio.
+
+Aircraft callsign is RP-C1234.
+
+Expected aviation vocabulary:
+Binalonan Radio,
+RP-C1234,
+request for engine start up.
+`;
+
+        case "startup-readback":
+          return `
+Aviation radio communication.
+Aircraft callsign RP-C1234.
+Vocabulary:
+runway 17,
+runway one seven,
+altimeter setting 29.95,
+two niner niner five,
+may start up,
+RP-C1234.
+`;
+
+
+        case "taxi-runup-request":
+          return `
+Aviation radio communication.
+Binalonan Radio.
+Aircraft callsign RP-C1234.
+Vocabulary:
+Binalonan Radio,
+RP-C1234,
+at ramp,
+request taxi,
+run-up area.
+`;
+
+
+        case "taxi-runup-readback":
+          return `
+Aviation radio communication.
+Aircraft callsign RP-C1234.
+Vocabulary:
+may taxi,
+run-up area,
+RP-C1234.
+`;
+
+
+        case "holding-request":
+          return `
+Aviation radio communication.
+Binalonan Radio.
+Aircraft callsign RP-C1234.
+Vocabulary:
+Binalonan Radio,
+RP-C1234,
+run-up area,
+request taxi,
+holding point 17,
+holding point one seven.
+`;
+
+
+        case "holding-readback":
+          return `
+Aviation radio communication.
+Aircraft callsign RP-C1234.
+Vocabulary:
+may taxi,
+holding point 17,
+holding point one seven,
+RP-C1234.
+`;
+
+
+        case "lineup-request":
+          return `
+Aviation radio communication.
+Binalonan Radio.
+Aircraft callsign RP-C1234.
+Vocabulary:
+Binalonan Radio,
+RP-C1234,
+holding point 17,
+request to line up.
+`;
+
+
+        case "lineup-readback":
+          return `
+Aviation radio communication.
+Aircraft callsign RP-C1234.
+Vocabulary:
+may line up,
+runway 17,
+runway one seven,
+RP-C1234.
+`;
+
+
+        default:
+          return `
+Aviation radio communication.
+Binalonan Radio.
+Aircraft callsign RP-C1234.
+`;
+      }
+
+    }, [
+      currentStage?.id,
+    ]);
+
+
+  /* ==========================================================
+     PLAY ATC VOICE
+     ========================================================== */
+
+  function playAtcVoice(
+    text
+  ) {
+    if (!text) {
+      return;
+    }
+
+
+    setAtcVoiceError(
+      null
+    );
+
+
+    speakAtc(
+      text,
+      {
+        onStart: () => {
+          setIsAtcSpeaking(
+            true
+          );
+        },
+
+
+        onEnd: () => {
+          setIsAtcSpeaking(
+            false
+          );
+        },
+
+
+        onError: () => {
+          setIsAtcSpeaking(
+            false
+          );
+
+          setAtcVoiceError(
+            "ATC voice could not be played."
+          );
+        },
+      }
+    );
+  }
+
+
+  /* ==========================================================
+     EVALUATE STUDENT TRANSMISSION
+
+     textOverride allows this same function to validate:
+
+     1. existing text
+     2. Whisper speech-to-text output
+
+     For PTT we pass Whisper's transcript directly.
+     ========================================================== */
+
+  function evaluateTransmission(
+    textOverride = null
+  ) {
+    const studentText =
+      typeof textOverride ===
+        "string"
+        ? textOverride
+        : transcript;
+
 
     if (
-      !transcript.trim()
+      !studentText.trim()
     ) {
       return;
     }
 
 
+    /* --------------------------------------------------------
+       Stop any old ATC transmission.
+       -------------------------------------------------------- */
+
+    stopAtcSpeech();
+
+
+    setIsAtcSpeaking(
+      false
+    );
+
+
+    setAtcVoiceError(
+      null
+    );
+
+
+    /* --------------------------------------------------------
+       RUN EXISTING COMMUNICATION VALIDATOR
+
+       This continues to use commsScenarios.js.
+       -------------------------------------------------------- */
+
     const checks =
       currentStage.evaluate(
-        transcript
+        studentText
       );
 
 
@@ -151,78 +429,235 @@ function CommsTrainingPanel({
     });
 
 
+    /* --------------------------------------------------------
+       INCORRECT TRANSMISSION
+
+       ATC does not respond.
+       Student must try again.
+       -------------------------------------------------------- */
+
+    /* ========================================================
+       INCORRECT / INCOMPLETE TRANSMISSION
+    
+       Instead of staying silent:
+    
+       validator
+           ↓
+       determine missing item
+           ↓
+       ATC asks student to repeat
+       ======================================================== */
+
     if (!correct) {
+      const retryResponse =
+        getAtcRetryResponse(
+          currentStage.id,
+          checks
+        );
+
+
       setLastAtcResponse(
-        null
+        retryResponse
       );
+
+
+      if (retryResponse) {
+        playAtcVoice(
+          retryResponse
+        );
+      }
+
 
       return;
     }
 
 
-    /* ========================================================
-       FINAL STAGE
-       ======================================================== */
+    /* --------------------------------------------------------
+       FINAL STUDENT READBACK
+
+       There is no additional ATC response after the last
+       correct student transmission.
+       -------------------------------------------------------- */
 
     if (
       stageIndex ===
       stages.length - 1
     ) {
-
       setComplete(true);
 
       return;
     }
 
 
-    /* ========================================================
-       DISPLAY ATC RESPONSE
-       ======================================================== */
+    /* --------------------------------------------------------
+       CORRECT TRANSMISSION
+
+       Display and speak the ATC response.
+       -------------------------------------------------------- */
+
+    const atcResponse =
+      currentStage.atcResponse;
+
 
     setLastAtcResponse(
-      currentStage.atcResponse
+      atcResponse
+    );
+
+
+    if (atcResponse) {
+      playAtcVoice(
+        atcResponse
+      );
+    }
+  }
+
+
+  /* ==========================================================
+     RECEIVE WHISPER TRANSCRIPT
+
+     PushToTalkButton
+          ↓
+     whisper.cpp
+          ↓
+     transcript
+          ↓
+     this function
+          ↓
+     existing validator
+     ========================================================== */
+
+  function handleSpeechTranscript(
+    text
+  ) {
+    if (
+      !text ||
+      !text.trim()
+    ) {
+      return;
+    }
+
+
+    /*
+      Stop any previous ATC audio.
+    */
+
+    stopAtcSpeech();
+
+
+    setIsAtcSpeaking(
+      false
+    );
+
+
+    /*
+      Display exactly what Whisper heard.
+    */
+
+    setTranscript(
+      text.trim()
+    );
+
+
+    /*
+      Clear previous validation.
+    */
+
+    setResult(
+      null
+    );
+
+
+    setLastAtcResponse(
+      null
+    );
+
+
+    setAtcVoiceError(
+      null
+    );
+
+
+    /*
+      Automatically validate.
+
+      The student no longer needs to press Check.
+    */
+
+    evaluateTransmission(
+      text.trim()
     );
   }
 
 
   /* ==========================================================
-     CONTINUE
+     CONTINUE COMMUNICATION
      ========================================================== */
 
   function continueCommunication() {
+    stopAtcSpeech();
+
+
+    setIsAtcSpeaking(
+      false
+    );
+
 
     setStageIndex(
       (previous) =>
         previous + 1
     );
 
+
     setTranscript("");
+
 
     setResult(null);
 
+
     setLastAtcResponse(
+      null
+    );
+
+
+    setAtcVoiceError(
       null
     );
   }
 
 
   /* ==========================================================
-     RESET
+     RESET COMMUNICATION
      ========================================================== */
 
   function resetCommunication() {
+    stopAtcSpeech();
+
+
+    setIsAtcSpeaking(
+      false
+    );
+
 
     setStageIndex(0);
 
+
     setTranscript("");
 
+
     setResult(null);
+
 
     setLastAtcResponse(
       null
     );
 
+
     setComplete(false);
+
+
+    setAtcVoiceError(
+      null
+    );
   }
 
 
@@ -249,11 +684,13 @@ function CommsTrainingPanel({
               />
             </div>
 
+
             <div>
 
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-200">
                 Communications
               </p>
+
 
               <h3 className="text-base font-bold">
                 {scenario.title}
@@ -264,17 +701,45 @@ function CommsTrainingPanel({
           </div>
 
 
-          <button
-            onClick={
-              resetCommunication
-            }
-            className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
-            title="Restart communication"
-          >
-            <RotateCcw
-              size={16}
-            />
-          </button>
+          <div className="flex items-center gap-2">
+
+            {/* ATC SPEAKING INDICATOR */}
+
+            {isAtcSpeaking && (
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-500/20 px-3 py-2">
+
+                <Volume2
+                  size={14}
+                  className="animate-pulse text-emerald-300"
+                />
+
+                <span className="hidden text-[9px] font-bold uppercase tracking-wider text-emerald-200 sm:inline">
+                  ATC Speaking
+                </span>
+
+              </div>
+            )}
+
+
+            {/* RESET */}
+
+            <button
+              type="button"
+
+              onClick={
+                resetCommunication
+              }
+
+              className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
+
+              title="Restart communication"
+            >
+              <RotateCcw
+                size={16}
+              />
+            </button>
+
+          </div>
 
         </div>
 
@@ -296,9 +761,10 @@ function CommsTrainingPanel({
                 index <
                 stageIndex;
 
+
               const active =
                 index ===
-                  stageIndex &&
+                stageIndex &&
                 !complete;
 
 
@@ -315,11 +781,10 @@ function CommsTrainingPanel({
                       h-1.5
                       rounded-full
 
-                      ${
-                        done ||
+                      ${done ||
                         complete
-                          ? "bg-emerald-500"
-                          : active
+                        ? "bg-emerald-500"
+                        : active
                           ? "bg-blue-600"
                           : "bg-slate-200"
                       }
@@ -335,11 +800,10 @@ function CommsTrainingPanel({
                       font-semibold
                       sm:block
 
-                      ${
-                        active
-                          ? "text-blue-600"
-                          : done ||
-                            complete
+                      ${active
+                        ? "text-blue-600"
+                        : done ||
+                          complete
                           ? "text-emerald-600"
                           : "text-slate-400"
                       }
@@ -374,55 +838,75 @@ function CommsTrainingPanel({
             <div>
 
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-600">
+
                 Transmission{" "}
                 {stageIndex + 1}
                 {" "}
                 of{" "}
                 {stages.length}
+
               </p>
 
 
               <h4 className="mt-2 text-lg font-bold text-slate-900">
+
                 {
                   currentStage.title
                 }
+
               </h4>
 
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
+
                 {
                   currentStage.prompt
                 }
+
               </p>
 
             </div>
 
 
             {/* =================================================
-                TEXT INPUT
+                TRANSCRIPT
+
+                Student cannot type here anymore.
+
+                Whisper automatically fills this box.
                 ================================================= */}
 
             <div className="mt-5">
 
-              <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                Student Transmission
-              </label>
+              <div className="mb-2 flex items-center justify-between gap-3">
+
+                <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+
+                  Speech Recognition Transcript
+
+                </label>
+
+
+                {transcript && (
+                  <span className="text-[9px] font-semibold uppercase tracking-wider text-emerald-600">
+                    Speech received
+                  </span>
+                )}
+
+              </div>
 
 
               <textarea
                 value={
                   transcript
                 }
-                onChange={(
-                  event
-                ) =>
-                  setTranscript(
-                    event.target
-                      .value
-                  )
-                }
+
+                readOnly
+
                 rows={4}
-                placeholder="Enter the student's radio transmission..."
+
+                placeholder="Hold PTT and speak your radio transmission..."
+
                 className="
                   w-full
                   resize-none
@@ -436,96 +920,81 @@ function CommsTrainingPanel({
                   leading-6
                   text-slate-800
                   outline-none
-                  transition
-
-                  focus:border-blue-500
-                  focus:bg-white
-                  focus:ring-4
-                  focus:ring-blue-100
                 "
+              />
+
+
+              <p className="mt-2 text-[10px] leading-4 text-slate-400">
+
+                This field shows exactly what the local
+                speech recognition system heard.
+
+              </p>
+
+            </div>
+
+
+            {/* =================================================
+                PUSH TO TALK
+
+                HOLD button
+                     ↓
+                speak
+                     ↓
+                release
+                     ↓
+                whisper.cpp
+                     ↓
+                transcript
+                     ↓
+                automatic validation
+                ================================================= */}
+
+            <div className="mt-4">
+
+              <PushToTalkButton
+                onTranscript={
+                  handleSpeechTranscript
+                }
+
+                prompt={
+                  speechRecognitionPrompt
+                }
+
+                disabled={
+                  isAtcSpeaking ||
+                  result?.correct
+                }
               />
 
             </div>
 
 
             {/* =================================================
-                ACTIONS
+                PTT INFORMATION
                 ================================================= */}
 
-            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+            {!result && (
+              <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2">
 
-              {/* MICROPHONE DISABLED FOR NOW */}
+                <p className="text-[10px] leading-5 text-blue-700">
 
-              <button
-                disabled
-                className="
-                  flex
-                  cursor-not-allowed
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-2xl
-                  border
-                  border-dashed
-                  border-slate-300
-                  bg-slate-50
-                  px-4
-                  py-3
-                  text-sm
-                  font-semibold
-                  text-slate-400
-                "
-              >
-                <Mic
-                  size={17}
-                />
+                  Hold the PTT button while speaking.
+                  Release the button when your radio
+                  transmission is complete.
 
-                Speech Later
-              </button>
+                </p>
 
-
-              <button
-                onClick={
-                  evaluateTransmission
-                }
-                disabled={
-                  !transcript.trim()
-                }
-                className="
-                  flex
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-2xl
-                  bg-blue-600
-                  px-5
-                  py-3
-                  text-sm
-                  font-semibold
-                  text-white
-                  transition
-
-                  hover:bg-blue-700
-
-                  disabled:cursor-not-allowed
-                  disabled:bg-slate-300
-                "
-              >
-                <Send
-                  size={16}
-                />
-
-                Check
-              </button>
-
-            </div>
+              </div>
+            )}
 
 
             {/* =================================================
-                RESULTS
+                VALIDATION RESULT
                 ================================================= */}
 
             {result && (
+
               <div
                 className={`
                   mt-5
@@ -533,10 +1002,9 @@ function CommsTrainingPanel({
                   border
                   p-4
 
-                  ${
-                    result.correct
-                      ? "border-emerald-200 bg-emerald-50"
-                      : "border-red-200 bg-red-50"
+                  ${result.correct
+                    ? "border-emerald-200 bg-emerald-50"
+                    : "border-red-200 bg-red-50"
                   }
                 `}
               >
@@ -544,15 +1012,19 @@ function CommsTrainingPanel({
                 <div className="flex items-center gap-2">
 
                   {result.correct ? (
+
                     <CheckCircle2
                       size={19}
                       className="text-emerald-600"
                     />
+
                   ) : (
+
                     <X
                       size={19}
                       className="text-red-500"
                     />
+
                   )}
 
 
@@ -561,16 +1033,19 @@ function CommsTrainingPanel({
                       text-sm
                       font-bold
 
-                      ${
-                        result.correct
-                          ? "text-emerald-700"
-                          : "text-red-700"
+                      ${result.correct
+                        ? "text-emerald-700"
+                        : "text-red-700"
                       }
                     `}
                   >
-                    {result.correct
-                      ? "Transmission Correct"
-                      : "Transmission Incomplete"}
+
+                    {
+                      result.correct
+                        ? "Transmission Correct"
+                        : "Say Again Required"
+                    }
+
                   </p>
 
                 </div>
@@ -585,26 +1060,33 @@ function CommsTrainingPanel({
                         key={
                           check.label
                         }
+
                         className="flex items-center justify-between rounded-xl bg-white/70 px-3 py-2"
                       >
 
                         <span className="text-xs font-medium text-slate-600">
+
                           {
                             check.label
                           }
+
                         </span>
 
 
                         {check.correct ? (
+
                           <Check
                             size={17}
                             className="text-emerald-600"
                           />
+
                         ) : (
+
                           <X
                             size={17}
                             className="text-red-500"
                           />
+
                         )}
 
                       </div>
@@ -614,12 +1096,34 @@ function CommsTrainingPanel({
 
                 </div>
 
+
+                {/* =============================================
+                    INCORRECT - TRY AGAIN
+                    ============================================= */}
+
+                {!result.correct && (
+
+                  <div className="mt-4 rounded-xl border border-red-100 bg-white/60 p-3">
+
+                    <p className="text-xs leading-5 text-red-700">
+
+                      Review the missing items above,
+                      then hold PTT and repeat your
+                      transmission.
+
+                    </p>
+
+                  </div>
+
+                )}
+
               </div>
+
             )}
 
 
             {/* =================================================
-                ATC
+                ATC RESPONSE
                 ================================================= */}
 
             {result?.correct &&
@@ -627,26 +1131,138 @@ function CommsTrainingPanel({
 
                 <div className="mt-5 overflow-hidden rounded-2xl border border-blue-200 bg-[#07192b]">
 
-                  <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3 text-blue-200">
+                  {/* ===========================================
+                      ATC HEADER
+                      =========================================== */}
 
-                    <Radio
-                      size={16}
-                    />
+                  <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
 
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
-                      Binalonan Radio
-                    </span>
+                    <div className="flex items-center gap-2 text-blue-200">
+
+                      <Radio
+                        size={16}
+                      />
+
+
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+
+                        Binalonan Radio
+
+                      </span>
+
+                    </div>
+
+
+                    {/* =========================================
+                        REPLAY ATC
+                        ========================================= */}
+
+                    <button
+                      type="button"
+
+                      onClick={() =>
+                        playAtcVoice(
+                          lastAtcResponse
+                        )
+                      }
+
+                      className="
+                        flex
+                        items-center
+                        gap-2
+                        rounded-lg
+                        border
+                        border-white/10
+                        bg-white/5
+                        px-2.5
+                        py-1.5
+                        text-[9px]
+                        font-bold
+                        uppercase
+                        tracking-wider
+                        text-blue-200
+                        transition
+
+                        hover:bg-white/10
+                        hover:text-white
+                      "
+                    >
+
+                      <Volume2
+                        size={13}
+                      />
+
+                      Replay
+
+                    </button>
 
                   </div>
 
 
+                  {/* ===========================================
+                      ATC MESSAGE
+                      =========================================== */}
+
                   <div className="p-4">
 
                     <p className="text-sm leading-6 text-white">
+
                       {
                         lastAtcResponse
                       }
+
                     </p>
+
+
+                    {/* =========================================
+                        ATC SPEAKING
+                        ========================================= */}
+
+                    {isAtcSpeaking && (
+
+                      <div className="mt-3 flex items-center gap-2 text-emerald-300">
+
+                        <Volume2
+                          size={14}
+                          className="animate-pulse"
+                        />
+
+
+                        <span className="text-[10px] font-bold uppercase tracking-wider">
+
+                          ATC transmitting...
+
+                        </span>
+
+                      </div>
+
+                    )}
+
+
+                    {/* =========================================
+                        ATC ERROR
+                        ========================================= */}
+
+                    {atcVoiceError && (
+
+                      <div className="mt-3 flex items-center gap-2 text-red-300">
+
+                        <VolumeX
+                          size={14}
+                        />
+
+
+                        <span className="text-xs">
+
+                          {
+                            atcVoiceError
+                          }
+
+                        </span>
+
+                      </div>
+
+                    )}
 
                   </div>
 
@@ -661,16 +1277,43 @@ function CommsTrainingPanel({
 
             {result?.correct &&
               stageIndex <
-                stages.length -
-                  1 && (
+              stages.length -
+              1 && (
 
                 <button
+                  type="button"
+
                   onClick={
                     continueCommunication
                   }
-                  className="mt-4 w-full rounded-2xl bg-[#08233f] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#103d68]"
+
+                  disabled={
+                    isAtcSpeaking
+                  }
+
+                  className="
+                    mt-4
+                    w-full
+                    rounded-2xl
+                    bg-[#08233f]
+                    px-4
+                    py-3
+                    text-sm
+                    font-semibold
+                    text-white
+                    transition
+
+                    hover:bg-[#103d68]
+
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                  "
                 >
-                  Continue Communication
+
+                  {isAtcSpeaking
+                    ? "Wait for ATC..."
+                    : "Continue Communication"}
+
                 </button>
 
               )}
@@ -679,7 +1322,7 @@ function CommsTrainingPanel({
         ) : (
 
           /* ===================================================
-             COMPLETE
+             COMMUNICATION COMPLETE
              =================================================== */
 
           <div className="py-5 text-center">
@@ -694,24 +1337,33 @@ function CommsTrainingPanel({
 
 
             <h4 className="mt-4 text-xl font-bold text-slate-900">
+
               Communication Complete
+
             </h4>
 
 
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
+
               The communication procedure and
               required readback have been
               completed correctly.
+
             </p>
 
 
             <button
+              type="button"
+
               onClick={
                 onComplete
               }
+
               className="mt-5 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
             >
+
               Complete Checklist Step
+
             </button>
 
           </div>
@@ -723,5 +1375,6 @@ function CommsTrainingPanel({
     </div>
   );
 }
+
 
 export default CommsTrainingPanel;

@@ -447,7 +447,7 @@ function ChecklistExecution() {
 
             {currentCompleted && (
               <div className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
-                ✓ Switch / action detected
+                 Switch / action detected
               </div>
             )}
           </GlassCard>

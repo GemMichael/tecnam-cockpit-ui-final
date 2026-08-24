@@ -161,7 +161,7 @@ function getEditDistance(
     ) {
       const cost =
         a[i - 1] ===
-        b[j - 1]
+          b[j - 1]
           ? 0
           : 1;
 
@@ -173,7 +173,7 @@ function getEditDistance(
           matrix[j - 1][i] + 1,
 
           matrix[j - 1][i - 1] +
-            cost
+          cost
         );
     }
   }
@@ -293,7 +293,7 @@ function wordMatches(
 
   if (
     cleanedWord.length >=
-      cleanedTarget.length - 2 &&
+    cleanedTarget.length - 2 &&
     cleanedTarget.startsWith(
       cleanedWord
     )
@@ -374,13 +374,193 @@ function hasAnyPhrase(
    plus a small spelling error.
    ============================================================ */
 
+/* ============================================================
+   REQUEST WORD / REQUEST CONCEPT
+
+   Whisper may hear the spoken word "request" in many ways.
+
+   We tolerate transcription variations here because "request"
+   itself is NOT a critical numerical value.
+
+   IMPORTANT:
+   This function does NOT by itself approve an aviation request.
+
+   Other validators still require the correct action:
+
+   Engine Start Request
+   = request + engine + start
+
+   Taxi Request
+   = request + taxi
+
+   Line-Up Request
+   = request + line up
+
+   Therefore accepting a transcription such as "requisite"
+   does not automatically make the whole transmission correct.
+   ============================================================ */
+
 function hasRequestWord(
   text
 ) {
-  return hasApproxWord(
-    text,
+  const normalized =
+    normalizeText(text);
+
+  const words =
+    getWords(text);
+
+
+  /* ==========================================================
+     COMMON / EXPECTED FORMS
+     ========================================================== */
+
+  const knownRequestVariants = [
+
+    /* Correct */
     "request",
-    1
+
+    /* Missing final letters */
+    "reques",
+    "reque",
+    "requeste",
+
+    /* Small spelling / STT errors */
+    "reqest",
+    "requst",
+    "requess",
+    "reqeust",
+    "requset",
+    "requestt",
+    "requestd",
+
+    /* Grammatical forms */
+    "requests",
+    "requested",
+    "requesting",
+    "requestin",
+
+    /* Whisper acoustic substitutions */
+    "requisite",
+    "requisit",
+    "requisition",
+    "requis",
+  ];
+
+
+  /* ==========================================================
+     DIRECT KNOWN VARIANT
+     ========================================================== */
+
+  if (
+    words.some(
+      (word) =>
+        knownRequestVariants.includes(
+          word
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     NORMAL PHRASES
+
+     These are useful if Whisper separates surrounding words.
+     ========================================================== */
+
+  const requestPhrases = [
+    "request for",
+    "request to",
+    "request taxi",
+    "request engine",
+    "request line",
+    "requesting taxi",
+    "requesting engine",
+    "requesting line",
+    "requested taxi",
+  ];
+
+
+  if (
+    requestPhrases.some(
+      (phrase) =>
+        normalized.includes(
+          phrase
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     EXISTING APPROXIMATE MATCHING
+
+     This already handles things such as:
+
+     request
+     reques
+     reqest
+     requst
+     requested
+     requesting
+     ========================================================== */
+
+  if (
+    hasApproxWord(
+      text,
+      "request",
+      1
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     SLIGHTLY STRONGER FALLBACK
+
+     Only examine words that still look reasonably similar
+     to "request".
+
+     We intentionally do NOT accept every word beginning with
+     "requ", because words like:
+
+     require
+     required
+     requirement
+
+     should not automatically count as "request".
+     ========================================================== */
+
+  return words.some(
+    (word) => {
+
+      const cleaned =
+        word
+          .toLowerCase()
+          .replace(
+            /[^a-z]/g,
+            ""
+          );
+
+
+      if (
+        cleaned.length < 5 ||
+        cleaned.length > 11
+      ) {
+        return false;
+      }
+
+
+      return (
+        getEditDistance(
+          cleaned,
+          "request"
+        ) <= 2
+      );
+    }
   );
 }
 
@@ -401,28 +581,155 @@ function hasRequestWord(
    action such as taxi / line up / start up.
    ============================================================ */
 
+/* ============================================================
+   MAY / PERMISSION WORD
+
+   Intended aviation phrase:
+   "may taxi"
+
+   Whisper can mishear "may" in many ways.
+
+   This function is intentionally tolerant because "may"
+   is NOT a safety-critical numerical value.
+
+   The action itself (taxi / line up / start up) is still
+   validated separately.
+   ============================================================ */
+
 function hasPermissionWord(
   text
 ) {
+  const normalized =
+    normalizeText(text);
+
   const words =
     getWords(text);
 
 
+  /* ==========================================================
+     KNOWN WHISPER VARIANTS OF "MAY"
+     ========================================================== */
+
   const knownVariants = [
     "may",
-    "main",
     "mai",
     "mei",
     "mey",
+
+    "main",
+    "mane",
+
+    "me",
+    "my",
+
+    "mate",
+
+    "made",
+
+    "make",
+
+    "maybe",
+
+    "mayday",
+
     "mayweather",
+
+    "mae",
+    "mei",
   ];
 
 
+  if (
+    words.some(
+      (word) =>
+        knownVariants.includes(
+          word
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     COMMON FULL-PHRASE WHISPER OUTPUTS
+     ========================================================== */
+
+  const knownPhrases = [
+
+    /* Intended */
+    "may taxi",
+
+    /* Common May substitutions */
+    "main taxi",
+    "mai taxi",
+    "mei taxi",
+    "mey taxi",
+
+    "me taxi",
+    "my taxi",
+
+    "mate taxi",
+
+    "made taxi",
+
+    "maybe taxi",
+
+    /* When Whisper joins/splits words strangely */
+    "maytaxi",
+    "main taxiing",
+
+    /* Observed style */
+    "mayweather may taxi",
+    "mayweather taxi",
+  ];
+
+
+  if (
+    knownPhrases.some(
+      (phrase) =>
+        normalized.includes(
+          phrase
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     SMALL FUZZY MATCH
+
+     Only apply this to words close to "may".
+     ========================================================== */
+
   return words.some(
-    (word) =>
-      knownVariants.includes(
+    (word) => {
+
+      const cleaned =
         word
-      )
+          .toLowerCase()
+          .replace(
+            /[^a-z]/g,
+            ""
+          );
+
+
+      if (
+        cleaned.length < 2 ||
+        cleaned.length > 5
+      ) {
+        return false;
+      }
+
+
+      return (
+        getEditDistance(
+          cleaned,
+          "may"
+        ) <= 1
+      );
+    }
   );
 }
 
@@ -484,6 +791,17 @@ function hasCallsign(
     ) ||
 
     normalized.includes(
+      "rpc c one two three four"
+    ) ||
+    normalized.includes(
+      "hbsc one two three four"
+    ) ||
+
+    normalized.includes(
+      "rpc c one two three four"
+    ) ||
+
+    normalized.includes(
       "romeo papa charlie one two three four"
     ) ||
 
@@ -538,6 +856,7 @@ function isBinalonanVariant(
     "binalonon",
     "binalunan",
     "binalunan",
+    "be not"
   ];
 
 
@@ -645,7 +964,7 @@ function hasBinalonanRadio(
 
       if (
         radioIndex -
-          count <
+        count <
         0
       ) {
         continue;
@@ -656,7 +975,7 @@ function hasBinalonanRadio(
         words
           .slice(
             radioIndex -
-              count,
+            count,
             radioIndex
           )
           .join("");
@@ -730,28 +1049,250 @@ function hasGoodMorning(
    RUNWAY WORD
    ============================================================ */
 
+/* ============================================================
+   RUNWAY WORD / RUNWAY CONCEPT
+
+   Intended aviation word:
+   "runway"
+
+   Whisper may transcribe "runway" in different ways:
+
+   runway
+   run way
+   run away
+   runaway
+   railway
+   rail way
+   right way
+   rightway
+   one way
+   runways
+   etc.
+
+   IMPORTANT:
+   This function validates ONLY the word/concept "runway".
+
+   The runway NUMBER is checked separately by hasNumber17(),
+   so "runway 16" must still NOT pass as Runway 17.
+   ============================================================ */
+
 function hasRunwayWord(
   text
 ) {
   const normalized =
     normalizeText(text);
 
+  const words =
+    getWords(text);
 
-  return (
-    normalized.includes(
-      "runway"
-    ) ||
 
-    normalized.includes(
-      "run way"
-    ) ||
+  /* ==========================================================
+     KNOWN WHISPER PHRASE VARIANTS
+     ========================================================== */
 
+  const knownRunwayPhrases = [
+
+    /* Correct */
+    "runway",
+    "run way",
+
+    /* Very common acoustic split */
+    "run away",
+    "runaway",
+
+    /* Railway substitution */
+    "railway",
+    "rail way",
+
+    /* Right-way substitution */
+    "right way",
+    "rightway",
+
+    /* Similar acoustic outputs */
+    "run ways",
+    "runways",
+
+    "running way",
+    "running away",
+
+    "run a way",
+
+    "ron way",
+    "ronway",
+
+    "ran way",
+    "ranway",
+
+    "round way",
+    "roundway",
+
+    "wrong way",
+    "wrongway",
+
+    "one way",
+    "oneway",
+
+    /* Possible Whisper pronunciation variants */
+    "run wei",
+    "run whey",
+    "run wai",
+
+    "rail wei",
+    "rail wai",
+
+    "right wei",
+    "right wai",
+  ];
+
+
+  if (
+    knownRunwayPhrases.some(
+      (phrase) =>
+        normalized.includes(
+          normalizeText(
+            phrase
+          )
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     SINGLE-WORD VARIANTS
+     ========================================================== */
+
+  const knownRunwayWords = [
+    "runway",
+    "runways",
+
+    "runaway",
+
+    "railway",
+
+    "rightway",
+
+    "ronway",
+    "ranway",
+    "roundway",
+
+    "wrongway",
+
+    "oneway",
+  ];
+
+
+  if (
+    words.some(
+      (word) =>
+        knownRunwayWords.includes(
+          word
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     NORMAL FUZZY MATCH
+
+     Handles small spelling/STT mistakes such as:
+
+     runwa
+     runwey
+     runwai
+     runwy
+     ========================================================== */
+
+  if (
     hasApproxWord(
       text,
       "runway",
-      1
+      2
     )
-  );
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     TWO-WORD "... WAY" PATTERN
+
+     Whisper often recognizes "way" correctly but changes
+     the first word.
+
+     Examples:
+
+     right way
+     rail way
+     ran way
+     ron way
+     round way
+
+     We only allow known runway-like first words.
+
+     DO NOT accept "way" by itself.
+     ========================================================== */
+
+  const runwayLikeFirstWords = [
+    "run",
+    "ron",
+    "ran",
+
+    "rail",
+
+    "right",
+
+    "round",
+
+    "wrong",
+
+    "one",
+  ];
+
+
+  for (
+    let index = 0;
+    index < words.length - 1;
+    index += 1
+  ) {
+    const first =
+      words[index];
+
+    const second =
+      words[index + 1];
+
+
+    const firstMatches =
+      runwayLikeFirstWords.some(
+        (candidate) =>
+          wordMatches(
+            first,
+            candidate,
+            1
+          )
+      );
+
+
+    const secondMatches =
+      second === "way" ||
+      second === "wei" ||
+      second === "wai" ||
+      second === "whey";
+
+
+    if (
+      firstMatches &&
+      secondMatches
+    ) {
+      return true;
+    }
+  }
+
+
+  return false;
 }
 
 
@@ -769,28 +1310,169 @@ function hasRunwayWord(
    but NOT another runway number.
    ============================================================ */
 
+/* ============================================================
+   NUMBER 17
+   CRITICAL VALUE
+
+   Intended aviation pronunciation:
+   "one seven"
+
+   Accept different TEXT representations of the SAME value:
+
+   17
+   one seven
+   1 7
+   one 7
+   1 seven
+   seventeen
+   seven teen
+
+   Hyphenated / punctuated forms are already normalized by
+   normalizeText():
+
+   one-seven  -> one seven
+   1-7        -> 1 7
+   one, seven -> one seven
+
+   IMPORTANT:
+   DO NOT use broad fuzzy matching here.
+
+   Wrong numbers such as:
+   one six
+   one eight
+   sixteen
+   eighteen
+   seventy
+
+   must NOT pass.
+   ============================================================ */
+
 function hasNumber17(
   text
 ) {
   const normalized =
     normalizeText(text);
 
+  const compact =
+    compactText(text);
 
-  return (
+
+  /* ==========================================================
+     DIRECT NUMERIC FORM
+
+     Examples:
+
+     17
+     runway 17
+     holding point 17
+     ========================================================== */
+
+  if (
     /(^|\s)17($|\s)/.test(
       normalized
-    ) ||
+    )
+  ) {
+    return true;
+  }
 
+
+  /* ==========================================================
+     COMPACT NUMERIC FORM
+
+     Handles punctuation forms such as:
+
+     "17."
+     "(17)"
+
+     normalizeText already handles most punctuation,
+     but this gives us another safe check.
+     ========================================================== */
+
+  if (
+    compact === "17"
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     STANDARD AVIATION FORM
+
+     "one seven"
+     ========================================================== */
+
+  if (
     normalized.includes(
       "one seven"
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     MIXED NUMBER / WORD FORMS
+
+     Whisper may output:
+
+     1 seven
+     one 7
+     1 7
+     ========================================================== */
+
+  if (
+    normalized.includes(
+      "1 seven"
     ) ||
 
     normalized.includes(
-      "seventeen"
-    )
-  );
-}
+      "one 7"
+    ) ||
 
+    /(^|\s)1\s+7($|\s)/.test(
+      normalized
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     NATURAL NUMBER FORM
+
+     Whisper sometimes converts "one seven" into:
+
+     seventeen
+     ========================================================== */
+
+  if (
+    /(^|\s)seventeen($|\s)/.test(
+      normalized
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     SPLIT "SEVENTEEN"
+
+     Occasionally STT may separate the word:
+
+     seven teen
+     ========================================================== */
+
+  if (
+    normalized.includes(
+      "seven teen"
+    )
+  ) {
+    return true;
+  }
+
+
+  return false;
+}
 
 /* ============================================================
    RUNWAY 17
@@ -929,16 +1611,54 @@ function hasAltimeterValue2995(
 function hasAltimeter2995(
   text
 ) {
-  const hasAltimeter =
+  const normalized =
+    normalizeText(text);
+
+  const words =
+    getWords(text);
+
+
+  /* ==========================================================
+     ALTIMETER WORD
+
+     Known Whisper variants are allowed because the actual
+     value 29.95 is checked separately and remains strict.
+     ========================================================== */
+
+  const knownAltimeterVariants = [
+    "altimeter",
+    "altimter",
+    "altimeter",
+    "altimeter",
+
+    "celtimeter",
+    "celtimter",
+
+    "eltimeter",
+    "ultimeter",
+
+    "altimeter",
+    "altimater",
+  ];
+
+
+  const hasAltimeterWord =
+    words.some(
+      (word) =>
+        knownAltimeterVariants.includes(
+          word
+        )
+    ) ||
+
     hasApproxWord(
       text,
       "altimeter",
-      1
+      2
     );
 
 
   return (
-    hasAltimeter &&
+    hasAltimeterWord &&
     hasAltimeterValue2995(
       text
     )
@@ -1042,23 +1762,91 @@ function hasMayStartUp(
    TAXI WORD
    ============================================================ */
 
+/* ============================================================
+   TAXI WORD / TAXI CONCEPT
+
+   Intended word:
+   taxi
+
+   This is a non-numeric action word, so reasonable Whisper
+   transcription errors can be tolerated.
+   ============================================================ */
+
 function hasTaxiWord(
   text
 ) {
-  return (
-    hasApproxWord(
-      text,
-      "taxi",
-      1
-    ) ||
+  const normalized =
+    normalizeText(text);
 
-    hasAnyPhrase(
-      text,
-      [
-        "taxy",
-        "taxiing",
-      ]
+  const words =
+    getWords(text);
+
+
+  /* ==========================================================
+     KNOWN VARIANTS
+     ========================================================== */
+
+  const knownVariants = [
+    "taxi",
+    "taxy",
+
+    "tax",
+    "taxie",
+    "taxey",
+
+    "taxiing",
+    "taxying",
+
+    "taxing",
+
+    "taxied",
+  ];
+
+
+  if (
+    words.some(
+      (word) =>
+        knownVariants.includes(
+          word
+        )
     )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     COMMON SPLIT WHISPER OUTPUTS
+     ========================================================== */
+
+  const knownPhrases = [
+    "tax he",
+    "taxi ing",
+    "tax e",
+    "taxi to",
+  ];
+
+
+  if (
+    knownPhrases.some(
+      (phrase) =>
+        normalized.includes(
+          phrase
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     EXISTING FUZZY MATCHING
+     ========================================================== */
+
+  return hasApproxWord(
+    text,
+    "taxi",
+    1
   );
 }
 
@@ -1101,18 +1889,114 @@ function hasTaxiRequest(
    Taxi itself must still be detected.
    ============================================================ */
 
+/* ============================================================
+   MAY TAXI / TAXI CLEARANCE READBACK
+
+   Intended phrase:
+   "May taxi"
+
+   Examples Whisper may produce:
+
+   may taxi
+   main taxi
+   mai taxi
+   mei taxi
+   me taxi
+   my taxi
+   mate taxi
+   may tax
+   main tax
+   may tax he
+   main tax he
+   may taxiing
+   mayweather may taxi
+
+   IMPORTANT:
+   This only validates the permission/action concept.
+
+   Destination and callsign are still checked independently.
+   ============================================================ */
+
 function hasMayTaxi(
   text
 ) {
-  return (
+  const normalized =
+    normalizeText(text);
+
+
+  /* ==========================================================
+     HIGH-CONFIDENCE PHRASE VARIANTS
+     ========================================================== */
+
+  const knownMayTaxiPhrases = [
+    "may taxi",
+    "main taxi",
+
+    "mai taxi",
+    "mei taxi",
+    "mey taxi",
+
+    "me taxi",
+    "my taxi",
+    "mainly",
+
+    "mate taxi",
+
+    "made taxi",
+
+    "maybe taxi",
+
+    "may tax",
+    "main tax",
+    "mai tax",
+    "mei tax",
+    "my tax",
+
+    "may tax he",
+    "main tax he",
+    "mai tax he",
+
+    "may taxiing",
+    "main taxiing",
+
+    "mayweather may taxi",
+    "mayweather taxi",
+  ];
+
+
+  if (
+    knownMayTaxiPhrases.some(
+      (phrase) =>
+        normalized.includes(
+          phrase
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     NORMAL SEMANTIC CHECK
+
+     Permission-like word
+            +
+     Taxi-like word
+     ========================================================== */
+
+  if (
     hasPermissionWord(
       text
     ) &&
-
     hasTaxiWord(
       text
     )
-  );
+  ) {
+    return true;
+  }
+
+
+  return false;
 }
 
 
@@ -1164,6 +2048,7 @@ function hasRunUpArea(
 
     "runway area",
     "runway up area",
+    "right up area",
 
     "ramp up area",
 
@@ -1225,6 +2110,8 @@ function hasRunUpArea(
     "runoff",
     "running",
     "runway",
+    "ranway",
+    "right",
     "ramp",
     "round",
     "harbaugh",
@@ -1248,7 +2135,7 @@ function hasRunUpArea(
     ) {
       const previous =
         words[
-          areaIndex - 1
+        areaIndex - 1
         ];
 
 
@@ -1276,12 +2163,12 @@ function hasRunUpArea(
     if (
       areaIndex >= 2 &&
       words[
-        areaIndex - 1
+      areaIndex - 1
       ] === "up"
     ) {
       const beforeUp =
         words[
-          areaIndex - 2
+        areaIndex - 2
         ];
 
 
@@ -1309,42 +2196,166 @@ function hasRunUpArea(
    AT RAMP
    ============================================================ */
 
+/* ============================================================
+   AT RAMP / RAMP POSITION
+
+   Intended phrase:
+   "at ramp"
+
+   This is a non-numeric position, therefore limited Whisper
+   tolerance is acceptable.
+
+   IMPORTANT:
+   Do not use this kind of tolerance for runway or holding
+   point numbers.
+   ============================================================ */
+
 function hasAtRamp(
   text
 ) {
   const normalized =
     normalizeText(text);
 
+  const words =
+    getWords(text);
+
+
+  /* ==========================================================
+     EXACT / NORMAL FORMS
+     ========================================================== */
+
+  const normalPhrases = [
+    "at ramp",
+    "at the ramp",
+    "on ramp",
+    "on the ramp",
+    "from ramp",
+    "from the ramp",
+    "the ramp",
+    "a ramp",
+  ];
+
 
   if (
-    normalized.includes(
-      "at ramp"
-    ) ||
-
-    normalized.includes(
-      "at the ramp"
+    normalPhrases.some(
+      (phrase) =>
+        normalized.includes(
+          phrase
+        )
     )
   ) {
     return true;
   }
 
 
-  /*
-    "ramp" carries the actual location information.
+  /* ==========================================================
+     KNOWN / PLAUSIBLE WHISPER VARIANTS
+     ========================================================== */
 
-    Allow small STT mistakes.
-  */
-
-  return hasApproxWord(
-    text,
+  const rampVariants = [
     "ramp",
-    1
+    "ram",
+    "ramps",
+
+    "remp",
+
+    "ran",
+
+    "cramp",
+
+    "ramped",
+
+    "ramping",
+  ];
+
+
+  if (
+    words.some(
+      (word) =>
+        rampVariants.includes(
+          word
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     FUZZY RAMP MATCH
+
+     Keep this limited to short words.
+
+     This catches small acoustic/spelling errors without
+     accepting arbitrary sentences.
+     ========================================================== */
+
+  return words.some(
+    (word) => {
+
+      const cleaned =
+        word
+          .toLowerCase()
+          .replace(
+            /[^a-z]/g,
+            ""
+          );
+
+
+      if (
+        cleaned.length < 3 ||
+        cleaned.length > 6
+      ) {
+        return false;
+      }
+
+
+      return (
+        getEditDistance(
+          cleaned,
+          "ramp"
+        ) <= 1
+      );
+    }
   );
 }
 
 
 /* ============================================================
    AT RUN-UP AREA
+   ============================================================ */
+
+/* ============================================================
+   AT RUN-UP AREA / RUN-UP POSITION
+
+   Intended phrase:
+   "at run-up area"
+
+   Whisper may hear or omit the position word "at".
+
+   Examples that should be accepted:
+
+   at run-up area
+   at the run-up area
+   at run up area
+   at the run up area
+
+   run-up area
+   run up area
+   runup area
+
+   from run-up area
+   from the run-up area
+   from run up area
+
+   plus the known run-up-area acoustic variants already
+   handled by hasRunUpArea().
+
+   IMPORTANT:
+   This is a non-critical position name.
+
+   Holding Point 17 is still validated separately and remains
+   strict.
    ============================================================ */
 
 function hasAtRunUpArea(
@@ -1354,33 +2365,89 @@ function hasAtRunUpArea(
     normalizeText(text);
 
 
-  const hasAt =
-    (
-      normalized.includes(
-        "at "
-      ) ||
+  /* ==========================================================
+     NORMAL POSITION PHRASES
+     ========================================================== */
 
-      normalized.includes(
-        "from the"
-      ) ||
+  const normalPhrases = [
+    "at run up area",
+    "at the run up area",
 
-      normalized.includes(
-        "from run"
-      )
-    );
+    "at runup area",
+    "at the runup area",
+
+    "from run up area",
+    "from the run up area",
+
+    "from runup area",
+    "from the runup area",
+
+    "on run up area",
+    "on the run up area",
+  ];
 
 
-  return (
-    hasAt &&
+  if (
+    normalPhrases.some(
+      (phrase) =>
+        normalized.includes(
+          phrase
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     MOST IMPORTANT FALLBACK
+
+     During this communication stage, detecting the actual
+     position "run-up area" is enough.
+
+     Whisper commonly drops short words such as:
+
+     at
+     the
+     from
+
+     Example spoken:
+     "at run-up area"
+
+     Whisper:
+     "run-up area"
+
+     This should still pass.
+     ========================================================== */
+
+  if (
     hasRunUpArea(
       text
     )
-  );
+  ) {
+    return true;
+  }
+
+
+  return false;
 }
 
 
 /* ============================================================
    LINE-UP
+   ============================================================ */
+
+/* ============================================================
+   LINE-UP CONCEPT
+
+   Intended phrase:
+   "line up"
+
+   Whisper may transcribe this in several ways.
+
+   This is NON-CRITICAL wording.
+
+   Runway 17 is still checked separately and remains strict.
    ============================================================ */
 
 function hasLineUpConcept(
@@ -1389,50 +2456,133 @@ function hasLineUpConcept(
   const normalized =
     normalizeText(text);
 
+  const words =
+    getWords(text);
+
+
+  /* ==========================================================
+     NORMAL / COMMON FORMS
+     ========================================================== */
+
+  const knownPhrases = [
+
+    /* Correct */
+    "line up",
+    "lineup",
+
+    /* Grammatical */
+    "lining up",
+    "lined up",
+
+    /* Common acoustic substitutions */
+    "lying up",
+    "lie up",
+
+    /* Whisper split/substitution possibilities */
+    "line app",
+    "line-up",
+
+    /* May occasionally hear "align" */
+    "align up",
+  ];
+
 
   if (
-    normalized.includes(
-      "line up"
-    ) ||
-
-    normalized.includes(
-      "lineup"
-    ) ||
-
-    normalized.includes(
-      "lining up"
+    knownPhrases.some(
+      (phrase) =>
+        normalized.includes(
+          normalizeText(
+            phrase
+          )
+        )
     )
   ) {
     return true;
   }
 
 
-  /*
-    Common STT acoustic substitution:
-    line → lying
-  */
+  /* ==========================================================
+     WORD PAIR CHECK
 
-  if (
-    normalized.includes(
-      "lying up"
-    )
+     Look for something close to:
+
+     line + up
+
+     or
+
+     lie + up
+     ========================================================== */
+
+  for (
+    let index = 0;
+    index < words.length - 1;
+    index += 1
   ) {
-    return true;
+
+    const first =
+      words[index];
+
+    const second =
+      words[index + 1];
+
+
+    const lineLike =
+      wordMatches(
+        first,
+        "line",
+        1
+      ) ||
+      wordMatches(
+        first,
+        "lie",
+        1
+      ) ||
+      wordMatches(
+        first,
+        "align",
+        1
+      );
+
+
+    const upLike =
+      second === "up" ||
+      wordMatches(
+        second,
+        "up",
+        1
+      );
+
+
+    if (
+      lineLike &&
+      upLike
+    ) {
+      return true;
+    }
   }
 
 
-  return (
-    hasApproxWord(
-      text,
-      "line",
-      1
-    ) &&
+  /* ==========================================================
+     SINGLE WORD "LINEUP"
+     ========================================================== */
 
-    getWords(
-      text
-    ).includes(
-      "up"
-    )
+  return words.some(
+    (word) => {
+
+      const cleaned =
+        word
+          .toLowerCase()
+          .replace(
+            /[^a-z]/g,
+            ""
+          );
+
+
+      return (
+        cleaned === "lineup" ||
+        cleaned === "liningup"
+      );
+    }
   );
 }
 
@@ -1441,14 +2591,73 @@ function hasLineUpConcept(
    LINE-UP REQUEST
    ============================================================ */
 
+/* ============================================================
+   LINE-UP REQUEST
+
+   Intended:
+   "request to line up"
+
+   Request transcription tolerance is handled by
+   hasRequestWord().
+
+   Line-up transcription tolerance is handled by
+   hasLineUpConcept().
+   ============================================================ */
+
 function hasLineUpRequest(
   text
 ) {
+  const normalized =
+    normalizeText(text);
+
+
+  /* ==========================================================
+     NORMAL / COMMON PHRASES
+     ========================================================== */
+
+  const knownPhrases = [
+    "request to line up",
+    "request line up",
+    "request lineup",
+
+    "requesting line up",
+    "requesting lineup",
+
+    "reques to line up",
+    "reques line up",
+
+    "requisite to line up",
+    "requisite line up",
+
+    "request to lying up",
+    "reques to lying up",
+  ];
+
+
+  if (
+    knownPhrases.some(
+      (phrase) =>
+        normalized.includes(
+          phrase
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     SEMANTIC VALIDATION
+
+     request-like concept
+             +
+     line-up concept
+     ========================================================== */
+
   return (
     hasRequestWord(
       text
     ) &&
-
     hasLineUpConcept(
       text
     )
@@ -1460,14 +2669,120 @@ function hasLineUpRequest(
    MAY LINE UP
    ============================================================ */
 
+/* ============================================================
+   MAY LINE UP / LINE-UP CLEARANCE READBACK
+
+   Intended phrase:
+   "may line up"
+
+   Whisper may produce:
+
+   may line up
+   main line up
+   mai line up
+   mei line up
+   my line up
+   me line up
+   may lineup
+   main lineup
+   may lying up
+   main lying up
+   etc.
+
+   IMPORTANT:
+
+   This validates ONLY the permission + line-up concept.
+
+   Runway 17 and RP-C1234 are checked separately.
+   ============================================================ */
+
 function hasMayLineUp(
   text
 ) {
+  const normalized =
+    normalizeText(text);
+
+
+  /* ==========================================================
+     KNOWN PHRASE VARIANTS
+     ========================================================== */
+
+  const knownMayLineUpPhrases = [
+
+    /* Correct */
+    "may line up",
+    "may lineup",
+
+    /* May → Main */
+    "main line up",
+    "main lineup",
+    "main line",
+    "mainline",
+
+    /* Phonetic May variants */
+    "mai line up",
+    "mai lineup",
+
+    "mei line up",
+    "mei lineup",
+
+    "mey line up",
+    "mey lineup",
+
+    "mae line up",
+
+    /* Short-word substitutions */
+    "me line up",
+    "my line up",
+
+    /* Other acoustic substitutions */
+    "mate line up",
+    "made line up",
+    "maybe line up",
+
+    /* line → lying */
+    "may lying up",
+    "main lying up",
+    "mai lying up",
+    "my lying up",
+
+    /* line → lie */
+    "may lie up",
+    "main lie up",
+
+    /* line → line app */
+    "may line app",
+    "main line app",
+
+    /* Previously observed style */
+    "main line up",
+  ];
+
+
+  if (
+    knownMayLineUpPhrases.some(
+      (phrase) =>
+        normalized.includes(
+          phrase
+        )
+    )
+  ) {
+    return true;
+  }
+
+
+  /* ==========================================================
+     NORMAL SEMANTIC FALLBACK
+
+     Permission-like word
+              +
+     line-up concept
+     ========================================================== */
+
   return (
     hasPermissionWord(
       text
     ) &&
-
     hasLineUpConcept(
       text
     )
@@ -1537,17 +2852,6 @@ export const commsScenarios = {
 
               correct:
                 hasCallsign(
-                  text
-                ),
-            },
-
-
-            {
-              label:
-                "Good Morning",
-
-              correct:
-                hasGoodMorning(
                   text
                 ),
             },
@@ -2161,7 +3465,7 @@ export function getCommsScenario(
 ) {
   return (
     commsScenarios[
-      scenarioId
+    scenarioId
     ] || null
   );
 }

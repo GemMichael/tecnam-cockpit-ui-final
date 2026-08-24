@@ -15,6 +15,8 @@ import ChecklistPanel from "../components/ChecklistPanel";
 import { controlSections } from "../data/controlDefinitions";
 import { checklists } from "../data/checklists";
 
+import TrainingScoreCard from "../components/TrainingScoreCard";
+
 import { useSimulator } from "../context/SimulatorContext";
 
 /* ============================================================
@@ -661,6 +663,8 @@ function CockpitControlsPage() {
           <div className="sticky top-24 space-y-6">
 
             <ChecklistPanel />
+
+            <TrainingScoreCard />
 
             {/* GPIO INFORMATION */}
 

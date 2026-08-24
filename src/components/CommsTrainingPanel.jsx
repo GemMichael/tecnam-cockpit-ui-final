@@ -19,13 +19,17 @@ import {
 } from "../data/commsScenarios";
 
 import {
-  getAtcRetryResponse,
+  getAtcClarification,
 } from "../data/commsRetryResponses";
 
 import {
   speakAtc,
   stopAtcSpeech,
 } from "../services/atcVoice";
+
+import {
+  recordCommsAttempt,
+} from "../services/trainingAssessment";
 
 import PushToTalkButton from "./PushToTalkButton";
 
@@ -95,6 +99,35 @@ function CommsTrainingPanel({
 
 
   /* ==========================================================
+     TARGETED ATC CLARIFICATION
+
+     When ATC says something like:
+
+     "Say again callsign."
+
+     the student only needs to repeat that specific item.
+     ========================================================== */
+
+  const [
+    pendingClarification,
+    setPendingClarification,
+  ] = useState(null);
+
+
+  /* ==========================================================
+     PREVIOUSLY UNDERSTOOD ITEMS
+
+     ATC remembers the parts of the student's original
+     transmission that were already understood correctly.
+     ========================================================== */
+
+  const [
+    rememberedChecks,
+    setRememberedChecks,
+  ] = useState(null);
+
+
+  /* ==========================================================
      RESET WHEN SCENARIO CHANGES
      ========================================================== */
 
@@ -116,6 +149,10 @@ function CommsTrainingPanel({
     setIsAtcSpeaking(false);
 
     setAtcVoiceError(null);
+
+    setPendingClarification(null);
+
+    setRememberedChecks(null);
 
 
     return () => {
@@ -312,6 +349,218 @@ Aircraft callsign RP-C1234.
 
 
   /* ==========================================================
+     CLARIFICATION-SPECIFIC WHISPER CONTEXT
+
+     IMPORTANT:
+     The normal speechRecognitionPrompt above is left unchanged
+     because it is already working well for your full calls.
+
+     We only add extra context while ATC is specifically asking
+     for a short clarification such as a callsign or runway.
+     ========================================================== */
+
+  const activeSpeechPrompt =
+    useMemo(() => {
+      const target =
+        pendingClarification?.targetLabel;
+
+
+      if (!target) {
+        return speechRecognitionPrompt;
+      }
+
+
+      switch (target) {
+        case "Callsign RP-C1234":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the aircraft callsign.
+Aviation phonetic vocabulary:
+Romeo Papa Charlie, one two three four.
+Aircraft identification format: RP-C1234.
+The next transmission may contain only the callsign.
+`;
+
+
+        case "Runway 17":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the runway.
+Aviation vocabulary:
+runway one seven, runway 17, one seven.
+The next transmission may contain only the runway information.
+`;
+
+
+        case "Altimeter 29.95":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the altimeter setting.
+Aviation vocabulary:
+altimeter setting, two niner niner five, 29.95.
+The next transmission may contain only the altimeter setting.
+`;
+
+
+        case "Holding Point 17":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the holding point.
+Aviation vocabulary:
+holding point one seven, holding point 17, one seven.
+The next transmission may contain only the holding-point information.
+`;
+
+
+        case "Run-Up Area":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the destination.
+Aviation vocabulary:
+run-up area, run up area.
+The next transmission may contain only the destination.
+`;
+
+
+        case "At Ramp":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the aircraft position.
+Aviation vocabulary:
+at ramp, ramp.
+The next transmission may contain only the position.
+`;
+
+
+        case "At Run-Up Area":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the aircraft position.
+Aviation vocabulary:
+at run-up area, at run up area, run-up area.
+The next transmission may contain only the position.
+`;
+
+
+        case "Taxi Request":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the request.
+Aviation vocabulary:
+request taxi, taxi request.
+The next transmission may contain only the requested action.
+`;
+
+
+        case "Engine Start Request":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the request.
+Aviation vocabulary:
+request engine start up, engine start request.
+The next transmission may contain only the requested action.
+`;
+
+
+        case "Line-Up Request":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the request.
+Aviation vocabulary:
+request to line up, line-up request.
+The next transmission may contain only the requested action.
+`;
+
+
+        case "May Taxi":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the taxi readback.
+Aviation vocabulary:
+may taxi.
+`;
+
+
+        case "May Start Up":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the startup readback.
+Aviation vocabulary:
+may start up.
+`;
+
+
+        case "May Line Up":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the line-up readback.
+Aviation vocabulary:
+may line up.
+`;
+
+
+        case "Binalonan Radio":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the station name.
+The station is Binalonan Radio.
+Binalonan is spelled B I N A L O N A N.
+`;
+
+
+        case "Good Morning":
+          return `
+${speechRecognitionPrompt}
+
+Short aviation radio clarification.
+The controller requested only the greeting.
+Aviation vocabulary: good morning.
+`;
+
+
+        default:
+          return `
+${speechRecognitionPrompt}
+
+This is a short aviation radio clarification.
+The controller requested clarification of: ${target}.
+`;
+      }
+    }, [
+      pendingClarification?.targetLabel,
+      speechRecognitionPrompt,
+    ]);
+
+
+  /* ==========================================================
      PLAY ATC VOICE
      ========================================================== */
 
@@ -360,123 +609,115 @@ Aircraft callsign RP-C1234.
 
 
   /* ==========================================================
-     EVALUATE STUDENT TRANSMISSION
+     BUILD TARGETED VALIDATION TEXT
 
-     textOverride allows this same function to validate:
+     The transcript shown on screen remains EXACTLY what Whisper
+     heard. This helper adds only the minimum semantic context
+     needed for a short clarification response.
 
-     1. existing text
-     2. Whisper speech-to-text output
+     Example:
 
-     For PTT we pass Whisper's transcript directly.
+     ATC: "Say again runway."
+     Student: "One seven."
+
+     Validation text becomes:
+     "runway one seven"
+
+     The number itself is NOT corrected or guessed.
      ========================================================== */
 
-  function evaluateTransmission(
-    textOverride = null
+  function buildClarificationValidationText(
+    text,
+    targetLabel
   ) {
-    const studentText =
-      typeof textOverride ===
-        "string"
-        ? textOverride
-        : transcript;
+    const cleanText =
+      text.trim();
 
 
+    switch (targetLabel) {
+      case "Runway 17":
+        return `runway ${cleanText}`;
+
+      case "Altimeter 29.95":
+        return `altimeter ${cleanText}`;
+
+      case "Holding Point 17":
+        return `holding point ${cleanText}`;
+
+      case "At Ramp":
+        return `at ${cleanText}`;
+
+      case "At Run-Up Area":
+        return `at ${cleanText}`;
+
+      case "Run-Up Area":
+        return cleanText;
+
+      default:
+        return cleanText;
+    }
+  }
+
+
+  /* ==========================================================
+     MERGE ONE CORRECT CLARIFICATION INTO THE ORIGINAL RESULTS
+     ========================================================== */
+
+  function mergeClarificationResult(
+    previousChecks,
+    retryChecks,
+    targetLabel
+  ) {
     if (
-      !studentText.trim()
+      !previousChecks ||
+      !targetLabel
     ) {
-      return;
+      return previousChecks;
     }
 
 
-    /* --------------------------------------------------------
-       Stop any old ATC transmission.
-       -------------------------------------------------------- */
-
-    stopAtcSpeech();
-
-
-    setIsAtcSpeaking(
-      false
-    );
-
-
-    setAtcVoiceError(
-      null
-    );
-
-
-    /* --------------------------------------------------------
-       RUN EXISTING COMMUNICATION VALIDATOR
-
-       This continues to use commsScenarios.js.
-       -------------------------------------------------------- */
-
-    const checks =
-      currentStage.evaluate(
-        studentText
-      );
-
-
-    const correct =
-      checks.every(
+    const retryTarget =
+      retryChecks.find(
         (check) =>
-          check.correct
+          check.label ===
+          targetLabel
       );
 
 
-    setResult({
-      checks,
-      correct,
-    });
+    return previousChecks.map(
+      (check) => {
+        if (
+          check.label !==
+          targetLabel
+        ) {
+          return check;
+        }
 
 
-    /* --------------------------------------------------------
-       INCORRECT TRANSMISSION
-
-       ATC does not respond.
-       Student must try again.
-       -------------------------------------------------------- */
-
-    /* ========================================================
-       INCORRECT / INCOMPLETE TRANSMISSION
-    
-       Instead of staying silent:
-    
-       validator
-           ↓
-       determine missing item
-           ↓
-       ATC asks student to repeat
-       ======================================================== */
-
-    if (!correct) {
-      const retryResponse =
-        getAtcRetryResponse(
-          currentStage.id,
-          checks
-        );
-
-
-      setLastAtcResponse(
-        retryResponse
-      );
-
-
-      if (retryResponse) {
-        playAtcVoice(
-          retryResponse
-        );
+        return {
+          ...check,
+          correct:
+            Boolean(
+              retryTarget?.correct
+            ),
+        };
       }
+    );
+  }
 
 
-      return;
-    }
+  /* ==========================================================
+     FINISH A SUCCESSFUL STUDENT TRANSMISSION
+     ========================================================== */
+
+  function finishSuccessfulTransmission() {
+    setPendingClarification(null);
+
+    setRememberedChecks(null);
 
 
     /* --------------------------------------------------------
        FINAL STUDENT READBACK
-
-       There is no additional ATC response after the last
-       correct student transmission.
        -------------------------------------------------------- */
 
     if (
@@ -490,9 +731,7 @@ Aircraft callsign RP-C1234.
 
 
     /* --------------------------------------------------------
-       CORRECT TRANSMISSION
-
-       Display and speak the ATC response.
+       NORMAL CHECKLIST ATC RESPONSE
        -------------------------------------------------------- */
 
     const atcResponse =
@@ -510,6 +749,705 @@ Aircraft callsign RP-C1234.
       );
     }
   }
+
+
+  /* ==========================================================
+     EVALUATE STUDENT TRANSMISSION
+
+     NORMAL MODE:
+     validates the complete transmission exactly as before.
+
+     CLARIFICATION MODE:
+     validates only the specific item ATC asked to hear again
+     and remembers everything already understood.
+     ========================================================== */
+
+/* ==========================================================
+   EVALUATE STUDENT TRANSMISSION
+
+   NORMAL MODE:
+   validates the complete transmission.
+
+   TARGETED CLARIFICATION MODE:
+   validates only the item ATC requested.
+
+   GRADING:
+   Every actual student transmission is recorded exactly once.
+
+   IMPORTANT:
+   The grading system receives SEMANTIC validation results,
+   not raw Whisper spelling.
+
+   Example:
+
+   Whisper:
+   "main taxi"
+
+   Validator:
+   May Taxi = true
+
+   Grade:
+   CORRECT
+
+   ========================================================== */
+
+function evaluateTransmission(
+  textOverride = null
+) {
+  const studentText =
+    typeof textOverride ===
+      "string"
+      ? textOverride
+      : transcript;
+
+
+  if (
+    !studentText.trim()
+  ) {
+    return;
+  }
+
+
+  stopAtcSpeech();
+
+  setIsAtcSpeaking(
+    false
+  );
+
+  setAtcVoiceError(
+    null
+  );
+
+
+  /* ========================================================
+     TARGETED SAY-AGAIN / RETRY MODE
+     ======================================================== */
+
+  if (
+    pendingClarification &&
+    rememberedChecks
+  ) {
+    const targetLabel =
+      pendingClarification
+        .targetLabel;
+
+
+    /* ======================================================
+       FULL TRANSMISSION RETRY
+
+       targetLabel === null means ATC asked for the complete
+       transmission/readback again.
+
+       Example:
+
+       ATC:
+       "Negative, runway one seven.
+        Say again readback."
+
+       Student must repeat the complete readback.
+       ====================================================== */
+
+    if (
+      !targetLabel
+    ) {
+      const fullChecks =
+        currentStage.evaluate(
+          studentText
+        );
+
+
+      const fullCorrect =
+        fullChecks.every(
+          (check) =>
+            check.correct
+        );
+
+
+      setResult({
+        checks:
+          fullChecks,
+
+        correct:
+          fullCorrect,
+      });
+
+
+      /* ------------------------------------------------------
+         FULL RETRY SUCCESS
+         ------------------------------------------------------ */
+
+      if (
+        fullCorrect
+      ) {
+        recordCommsAttempt({
+          scenarioId,
+
+          stageId:
+            currentStage.id,
+
+          stageTitle:
+            currentStage.title,
+
+          transcript:
+            studentText,
+
+          checks:
+            fullChecks,
+
+          mode:
+            "full-retry",
+
+          targetLabel:
+            null,
+
+          stageComplete:
+            true,
+
+          clarification:
+            null,
+        });
+
+
+        finishSuccessfulTransmission();
+
+
+        return;
+      }
+
+
+      /* ------------------------------------------------------
+         FULL RETRY STILL INCORRECT
+         ------------------------------------------------------ */
+
+      const clarification =
+        getAtcClarification(
+          currentStage.id,
+          fullChecks
+        );
+
+
+      /*
+        RECORD THIS STUDENT ATTEMPT.
+
+        The clarification stored here is the ATC response that
+        resulted from this failed attempt.
+      */
+
+      recordCommsAttempt({
+        scenarioId,
+
+        stageId:
+          currentStage.id,
+
+        stageTitle:
+          currentStage.title,
+
+        transcript:
+          studentText,
+
+        checks:
+          fullChecks,
+
+        mode:
+          "full-retry",
+
+        targetLabel:
+          null,
+
+        stageComplete:
+          false,
+
+        clarification,
+      });
+
+
+      setRememberedChecks(
+        fullChecks
+      );
+
+
+      setPendingClarification(
+        clarification
+      );
+
+
+      setLastAtcResponse(
+        clarification.message
+      );
+
+
+      if (
+        clarification.message
+      ) {
+        playAtcVoice(
+          clarification.message
+        );
+      }
+
+
+      return;
+    }
+
+
+    /* ======================================================
+       TARGETED CLARIFICATION
+
+       Example:
+
+       ATC:
+       "Say again callsign."
+
+       Student:
+       "Romeo Papa Charlie one two three four."
+
+       Only Callsign RP-C1234 is re-evaluated.
+       ====================================================== */
+
+    const validationText =
+      buildClarificationValidationText(
+        studentText,
+        targetLabel
+      );
+
+
+    const retryChecks =
+      currentStage.evaluate(
+        validationText
+      );
+
+
+    const retryTarget =
+      retryChecks.find(
+        (check) =>
+          check.label ===
+          targetLabel
+      );
+
+
+    /* ======================================================
+       TARGETED ITEM STILL INCORRECT / NOT UNDERSTOOD
+       ====================================================== */
+
+    if (
+      !retryTarget?.correct
+    ) {
+      /*
+        IMPORTANT:
+
+        Do NOT save retryChecks as the complete transmission.
+
+        The student was only asked to repeat ONE item.
+
+        Other checks may appear false because they were not
+        spoken during this short clarification.
+
+        Therefore grading records ONLY retryTarget.
+      */
+
+      recordCommsAttempt({
+        scenarioId,
+
+        stageId:
+          currentStage.id,
+
+        stageTitle:
+          currentStage.title,
+
+        transcript:
+          studentText,
+
+        checks:
+          retryTarget
+            ? [
+                retryTarget,
+              ]
+            : [],
+
+        mode:
+          "targeted-clarification",
+
+        targetLabel,
+
+        stageComplete:
+          false,
+
+        /*
+          Same ATC clarification remains active because the
+          requested item still was not understood.
+        */
+        clarification:
+          pendingClarification,
+      });
+
+
+      setResult({
+        checks:
+          rememberedChecks,
+
+        correct:
+          false,
+      });
+
+
+      setLastAtcResponse(
+        pendingClarification
+          .message
+      );
+
+
+      if (
+        pendingClarification
+          .message
+      ) {
+        playAtcVoice(
+          pendingClarification
+            .message
+        );
+      }
+
+
+      return;
+    }
+
+
+    /* ======================================================
+       TARGETED ITEM CORRECT
+
+       Merge it into everything ATC remembered from the
+       original transmission.
+       ====================================================== */
+
+    const mergedChecks =
+      mergeClarificationResult(
+        rememberedChecks,
+        retryChecks,
+        targetLabel
+      );
+
+
+    const nowComplete =
+      mergedChecks.every(
+        (check) =>
+          check.correct
+      );
+
+
+    setResult({
+      checks:
+        mergedChecks,
+
+      correct:
+        nowComplete,
+    });
+
+
+    /* ======================================================
+       TARGETED CORRECTION COMPLETES THE STAGE
+       ====================================================== */
+
+    if (
+      nowComplete
+    ) {
+      recordCommsAttempt({
+        scenarioId,
+
+        stageId:
+          currentStage.id,
+
+        stageTitle:
+          currentStage.title,
+
+        transcript:
+          studentText,
+
+        /*
+          Only record the item that was actually spoken in
+          this transmission.
+
+          rememberedChecks already contains the original
+          transmission history.
+        */
+        checks:
+          retryTarget
+            ? [
+                retryTarget,
+              ]
+            : [],
+
+        mode:
+          "targeted-clarification",
+
+        targetLabel,
+
+        stageComplete:
+          true,
+
+        clarification:
+          null,
+      });
+
+
+      finishSuccessfulTransmission();
+
+
+      return;
+    }
+
+
+    /* ======================================================
+       TARGET WAS CORRECT BUT ANOTHER ITEM IS STILL MISSING
+
+       Example:
+
+       Original:
+       Station       ✓
+       Callsign      ✕
+       Position      ✕
+       Request       ✓
+
+       ATC:
+       Say again callsign.
+
+       Student corrects callsign.
+
+       Now:
+       Station       ✓
+       Callsign      ✓
+       Position      ✕
+       Request       ✓
+
+       ATC then asks:
+       Say again position.
+       ====================================================== */
+
+    const nextClarification =
+      getAtcClarification(
+        currentStage.id,
+        mergedChecks
+      );
+
+
+    /*
+      Record the successful targeted response.
+
+      This attempt produced another clarification because a
+      different item remains incomplete.
+    */
+
+    recordCommsAttempt({
+      scenarioId,
+
+      stageId:
+        currentStage.id,
+
+      stageTitle:
+        currentStage.title,
+
+      transcript:
+        studentText,
+
+      checks:
+        retryTarget
+          ? [
+              retryTarget,
+            ]
+          : [],
+
+      mode:
+        "targeted-clarification",
+
+      targetLabel,
+
+      stageComplete:
+        false,
+
+      clarification:
+        nextClarification,
+    });
+
+
+    setRememberedChecks(
+      mergedChecks
+    );
+
+
+    setPendingClarification(
+      nextClarification
+    );
+
+
+    setLastAtcResponse(
+      nextClarification
+        .message
+    );
+
+
+    if (
+      nextClarification
+        .message
+    ) {
+      playAtcVoice(
+        nextClarification
+          .message
+      );
+    }
+
+
+    return;
+  }
+
+
+  /* ========================================================
+     NORMAL FIRST ATTEMPT
+
+     This evaluates the complete expected radio transmission.
+     ======================================================== */
+
+  const checks =
+    currentStage.evaluate(
+      studentText
+    );
+
+
+  const correct =
+    checks.every(
+      (check) =>
+        check.correct
+    );
+
+
+  setResult({
+    checks,
+    correct,
+  });
+
+
+  /* ========================================================
+     NORMAL ATTEMPT INCORRECT / INCOMPLETE
+     ======================================================== */
+
+  if (
+    !correct
+  ) {
+    const clarification =
+      getAtcClarification(
+        currentStage.id,
+        checks
+      );
+
+
+    /* ======================================================
+       GRADING
+
+       Save ORIGINAL first attempt before any clarification.
+
+       This is important because later corrections must NOT
+       erase the first error.
+
+       Example:
+
+       Attempt 1:
+       Runway 17 ✕
+
+       Attempt 2:
+       Runway 17 ✓
+
+       Final stage:
+       COMPLETE
+
+       Grade history:
+       Critical error remains recorded from Attempt 1.
+       ====================================================== */
+
+    recordCommsAttempt({
+      scenarioId,
+
+      stageId:
+        currentStage.id,
+
+      stageTitle:
+        currentStage.title,
+
+      transcript:
+        studentText,
+
+      checks,
+
+      mode:
+        "normal",
+
+      targetLabel:
+        null,
+
+      stageComplete:
+        false,
+
+      clarification,
+    });
+
+
+    setRememberedChecks(
+      checks
+    );
+
+
+    setPendingClarification(
+      clarification
+    );
+
+
+    setLastAtcResponse(
+      clarification.message
+    );
+
+
+    if (
+      clarification.message
+    ) {
+      playAtcVoice(
+        clarification.message
+      );
+    }
+
+
+    return;
+  }
+
+
+  /* ========================================================
+     CORRECT ON FIRST ATTEMPT
+     ======================================================== */
+
+  recordCommsAttempt({
+    scenarioId,
+
+    stageId:
+      currentStage.id,
+
+    stageTitle:
+      currentStage.title,
+
+    transcript:
+      studentText,
+
+    checks,
+
+    mode:
+      "normal",
+
+    targetLabel:
+      null,
+
+    stageComplete:
+      true,
+
+    clarification:
+      null,
+  });
+
+
+  finishSuccessfulTransmission();
+}
 
 
   /* ==========================================================
@@ -622,6 +1560,16 @@ Aircraft callsign RP-C1234.
     setAtcVoiceError(
       null
     );
+
+
+    setPendingClarification(
+      null
+    );
+
+
+    setRememberedChecks(
+      null
+    );
   }
 
 
@@ -656,6 +1604,16 @@ Aircraft callsign RP-C1234.
 
 
     setAtcVoiceError(
+      null
+    );
+
+
+    setPendingClarification(
+      null
+    );
+
+
+    setRememberedChecks(
       null
     );
   }
@@ -950,6 +1908,21 @@ Aircraft callsign RP-C1234.
                 automatic validation
                 ================================================= */}
 
+            {pendingClarification && (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">
+                  ATC Clarification Requested
+                </p>
+
+                <p className="mt-1 text-xs font-semibold text-amber-900">
+                  {pendingClarification.targetLabel
+                    ? `Repeat only: ${pendingClarification.targetLabel}`
+                    : "Repeat the complete transmission"}
+                </p>
+              </div>
+            )}
+
+
             <div className="mt-4">
 
               <PushToTalkButton
@@ -958,7 +1931,7 @@ Aircraft callsign RP-C1234.
                 }
 
                 prompt={
-                  speechRecognitionPrompt
+                  activeSpeechPrompt
                 }
 
                 disabled={
@@ -1107,9 +2080,9 @@ Aircraft callsign RP-C1234.
 
                     <p className="text-xs leading-5 text-red-700">
 
-                      Review the missing items above,
-                      then hold PTT and repeat your
-                      transmission.
+                      {pendingClarification?.targetLabel
+                        ? `ATC understood the other correct items. Repeat only: ${pendingClarification.targetLabel}.`
+                        : "Listen to ATC, then hold PTT and repeat the complete transmission."}
 
                     </p>
 
@@ -1126,8 +2099,7 @@ Aircraft callsign RP-C1234.
                 ATC RESPONSE
                 ================================================= */}
 
-            {result?.correct &&
-              lastAtcResponse && (
+            {lastAtcResponse && (
 
                 <div className="mt-5 overflow-hidden rounded-2xl border border-blue-200 bg-[#07192b]">
 

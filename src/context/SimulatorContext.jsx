@@ -16,23 +16,69 @@ import {
     initialControls,
 } from "../data/controlDefinitions";
 
-const SimulatorContext = createContext(null);
 
-function matchesExpected(expected, value) {
-    if (Array.isArray(expected)) {
-        return expected.includes(value);
+/* ============================================================
+   GRADING SYSTEM
+   ============================================================ */
+
+import {
+    recordChecklistControlInput,
+    recordChecklistStepCompletion,
+} from "../services/trainingAssessment";
+
+
+const SimulatorContext =
+    createContext(null);
+
+
+/* ============================================================
+   CHECK EXPECTED VALUE
+   ============================================================ */
+
+function matchesExpected(
+    expected,
+    value
+) {
+    if (
+        Array.isArray(
+            expected
+        )
+    ) {
+        return expected.includes(
+            value
+        );
     }
 
-    return expected === value;
+
+    return (
+        expected ===
+        value
+    );
 }
+
+
+/* ============================================================
+   SIMULATOR PROVIDER
+   ============================================================ */
 
 export function SimulatorProvider({
     children,
 }) {
+    /* ========================================================
+       COCKPIT CONTROL STATES
+       ======================================================== */
+
     const [
         controls,
         setControls,
-    ] = useState(initialControls);
+    ] = useState(
+        initialControls
+    );
+
+
+    /* ========================================================
+       ACTIVE CHECKLIST
+       ======================================================== */
 
     const [
         activeChecklistId,
@@ -41,20 +87,51 @@ export function SimulatorProvider({
         "cockpit-inspection"
     );
 
+
+    /* ========================================================
+       CURRENT CHECKLIST STEP
+       ======================================================== */
+
     const [
         currentStepIndex,
         setCurrentStepIndex,
     ] = useState(0);
+
+
+    /* ========================================================
+       COMPLETED CHECKLIST STEPS
+       ======================================================== */
 
     const [
         completedStepIds,
         setCompletedStepIds,
     ] = useState([]);
 
+
+    /* ========================================================
+       SEQUENCE STEP PROGRESS
+
+       Example:
+
+       Magnetos:
+
+       LEFT
+       RIGHT
+       BOTH
+
+       sequenceProgress keeps track of which position
+       should be performed next.
+       ======================================================== */
+
     const [
         sequenceProgress,
         setSequenceProgress,
     ] = useState(0);
+
+
+    /* ========================================================
+       CHECKLIST FEEDBACK
+       ======================================================== */
 
     const [
         feedback,
@@ -63,103 +140,315 @@ export function SimulatorProvider({
         "Operate the required cockpit control for the current checklist step."
     );
 
+
+    /* ========================================================
+       EXISTING SIMULATOR MISTAKES
+
+       This is your original local mistakes array.
+
+       The new grading system maintains its own detailed
+       assessment history separately.
+       ======================================================== */
+
     const [
         mistakes,
         setMistakes,
     ] = useState([]);
+
+
+    /* ========================================================
+       SIMPLE ENGINE STATE
+       ======================================================== */
 
     const [
         engineRunning,
         setEngineRunning,
     ] = useState(false);
 
+
+    /* ========================================================
+       LAST COCKPIT INPUT
+       ======================================================== */
+
     const [
         lastEvent,
         setLastEvent,
     ] = useState(null);
 
+
+    /* ========================================================
+       CURRENT CHECKLIST
+       ======================================================== */
+
     const currentChecklist =
-        useMemo(() => {
-            return (
-                getChecklistById(
-                    activeChecklistId
-                ) || checklists[0]
-            );
-        }, [activeChecklistId]);
+        useMemo(
+            () => {
+                return (
+                    getChecklistById(
+                        activeChecklistId
+                    ) ||
+                    checklists[0]
+                );
+            },
+            [
+                activeChecklistId,
+            ]
+        );
+
+
+    /* ========================================================
+       CURRENT STEP
+       ======================================================== */
 
     const currentStep =
         currentChecklist.steps[
-        currentStepIndex
+            currentStepIndex
         ] || null;
+
+
+    /* ========================================================
+       CHECKLIST COMPLETE
+       ======================================================== */
 
     const isChecklistComplete =
         currentStepIndex >=
         currentChecklist.steps.length;
 
+
+    /* ========================================================
+       CHECKLIST PROGRESS %
+       ======================================================== */
+
     const progressPercentage =
-        currentChecklist.steps.length === 0
+        currentChecklist.steps
+            .length === 0
             ? 0
             : Math.round(
-                (completedStepIds.length /
-                    currentChecklist.steps.length) *
-                100
-            );
+                  (
+                      completedStepIds.length /
+                      currentChecklist.steps.length
+                  ) *
+                      100
+              );
+
+
+    /* ========================================================
+       RESET CURRENT CHECKLIST PROGRESS
+
+       IMPORTANT:
+
+       This resets the visible checklist progress.
+
+       It does NOT erase the grading history.
+
+       This is intentional because a student should not be
+       able to erase mistakes simply by restarting a checklist.
+
+       To completely reset the grade, use "New Session" from
+       the TrainingScoreCard.
+       ======================================================== */
 
     const resetChecklistProgress =
-        useCallback(() => {
-            setCurrentStepIndex(0);
-            setCompletedStepIds([]);
-            setSequenceProgress(0);
-            setFeedback(
-                "Checklist progress reset."
-            );
-        }, []);
+        useCallback(
+            () => {
+                setCurrentStepIndex(
+                    0
+                );
+
+                setCompletedStepIds(
+                    []
+                );
+
+                setSequenceProgress(
+                    0
+                );
+
+                setFeedback(
+                    "Checklist progress reset."
+                );
+            },
+            []
+        );
+
+
+    /* ========================================================
+       RESET ALL COCKPIT CONTROLS
+
+       Does NOT erase training grade/history.
+       ======================================================== */
 
     const resetAllControls =
-        useCallback(() => {
-            setControls(initialControls);
-            setEngineRunning(false);
-            setLastEvent(null);
-            setFeedback(
-                "All controls reset to their default state."
-            );
-        }, []);
+        useCallback(
+            () => {
+                setControls(
+                    initialControls
+                );
+
+                setEngineRunning(
+                    false
+                );
+
+                setLastEvent(
+                    null
+                );
+
+                setFeedback(
+                    "All controls reset to their default state."
+                );
+            },
+            []
+        );
+
+
+    /* ========================================================
+       HARD RESET SIMULATOR
+
+       IMPORTANT:
+
+       This resets simulator state.
+
+       It intentionally does NOT erase the grading session.
+
+       Use:
+       TrainingScoreCard -> New
+
+       when you want an entirely fresh graded session.
+       ======================================================== */
 
     const hardResetAll =
-        useCallback(() => {
-            setControls(initialControls);
-            setEngineRunning(false);
-            setLastEvent(null);
-            setCurrentStepIndex(0);
-            setCompletedStepIds([]);
-            setSequenceProgress(0);
-            setMistakes([]);
-            setFeedback(
-                "Simulator reset. Ready for checklist execution."
-            );
-        }, []);
+        useCallback(
+            () => {
+                setControls(
+                    initialControls
+                );
+
+                setEngineRunning(
+                    false
+                );
+
+                setLastEvent(
+                    null
+                );
+
+                setCurrentStepIndex(
+                    0
+                );
+
+                setCompletedStepIds(
+                    []
+                );
+
+                setSequenceProgress(
+                    0
+                );
+
+                setMistakes(
+                    []
+                );
+
+                setFeedback(
+                    "Simulator reset. Ready for checklist execution."
+                );
+            },
+            []
+        );
+
+
+    /* ========================================================
+       SELECT CHECKLIST
+       ======================================================== */
 
     const selectChecklist =
-        useCallback((checklistId) => {
-            setActiveChecklistId(checklistId);
-            setCurrentStepIndex(0);
-            setCompletedStepIds([]);
-            setSequenceProgress(0);
-            setFeedback(
-                "Checklist changed. Start with the first step."
-            );
-        }, []);
+        useCallback(
+            (
+                checklistId
+            ) => {
+                setActiveChecklistId(
+                    checklistId
+                );
+
+                setCurrentStepIndex(
+                    0
+                );
+
+                setCompletedStepIds(
+                    []
+                );
+
+                setSequenceProgress(
+                    0
+                );
+
+                setFeedback(
+                    "Checklist changed. Start with the first step."
+                );
+            },
+            []
+        );
+
+
+    /* ========================================================
+       COMPLETE CHECKLIST STEP
+
+       NEW:
+       Every completed checklist step is also sent to the
+       grading system.
+
+       Communications are automatically ignored here by
+       trainingAssessment.js because comms receive their own
+       separate communication grade.
+
+       source examples:
+
+       ui
+       gpio
+       manual
+       comms
+       system
+       ======================================================== */
 
     const completeStep =
         useCallback(
-            (step) => {
+            (
+                step,
+                source = "system"
+            ) => {
+                if (
+                    !step
+                ) {
+                    return;
+                }
+
+
+                /* =============================================
+                   GRADING SYSTEM
+
+                   Record completion BEFORE moving to the next
+                   checklist step.
+                   ============================================= */
+
+                recordChecklistStepCompletion({
+                    step,
+                    source,
+                });
+
+
+                /* =============================================
+                   EXISTING COMPLETION LOGIC
+                   ============================================= */
+
                 setCompletedStepIds(
-                    (previous) => {
+                    (
+                        previous
+                    ) => {
                         if (
-                            previous.includes(step.id)
+                            previous.includes(
+                                step.id
+                            )
                         ) {
                             return previous;
                         }
+
 
                         return [
                             ...previous,
@@ -168,25 +457,50 @@ export function SimulatorProvider({
                     }
                 );
 
-                setSequenceProgress(0);
+
+                /*
+                  Reset sequence tracker when step changes.
+                */
+
+                setSequenceProgress(
+                    0
+                );
+
 
                 const nextIndex =
-                    currentStepIndex + 1;
+                    currentStepIndex +
+                    1;
+
+
+                /*
+                  End of current checklist.
+                */
 
                 if (
                     nextIndex >=
-                    currentChecklist.steps.length
+                    currentChecklist
+                        .steps
+                        .length
                 ) {
                     setFeedback(
                         `${currentChecklist.title} checklist complete.`
                     );
-                } else {
+                }
+
+                /*
+                  Continue to next checklist item.
+                */
+
+                else {
                     setFeedback(
                         "Correct. Proceed to the next step."
                     );
                 }
 
-                setCurrentStepIndex(nextIndex);
+
+                setCurrentStepIndex(
+                    nextIndex
+                );
             },
             [
                 currentChecklist,
@@ -194,320 +508,727 @@ export function SimulatorProvider({
             ]
         );
 
+
     /*
     |--------------------------------------------------------------------------
     | MAIN INPUT FUNCTION
     |--------------------------------------------------------------------------
     |
     | FOR NOW:
-    | React buttons call this:
-    | setControl("master_switch", "ON", "ui")
+    |
+    | React buttons call:
+    |
+    | setControl(
+    |     "master_switch",
+    |     "ON",
+    |     "ui"
+    | )
+    |
     |
     | LATER:
-    | Python / GPIO / WebSocket can call the SAME function:
-    | setControl("master_switch", "ON", "gpio")
     |
-    | This is why the checklist logic is kept here and not inside the button.
+    | Python / GPIO / WebSocket can call:
+    |
+    | setControl(
+    |     "master_switch",
+    |     "ON",
+    |     "gpio"
+    | )
+    |
+    |
+    | BOTH paths go through:
+    |
+    |                setControl()
+    |                    |
+    |          -----------------------
+    |          |                     |
+    |     Simulator Logic        Grading
+    |
+    |
+    | This makes the grading system Raspberry Pi ready.
     |--------------------------------------------------------------------------
     */
 
-    const setControl = useCallback(
-        (
-            controlId,
-            value,
-            source = "ui"
-        ) => {
-            setControls((previous) => ({
-                ...previous,
-                [controlId]: value,
-            }));
 
-            setLastEvent({
+    const setControl =
+        useCallback(
+            (
                 controlId,
                 value,
-                source,
-                timestamp: Date.now(),
-            });
+                source = "ui"
+            ) => {
+                /* =============================================
+                   UPDATE ACTUAL COCKPIT STATE
+                   ============================================= */
 
-            // Very simple engine simulation for frontend demo only
-            if (
-                controlId === "ignition" &&
-                value === "START"
-            ) {
-                setEngineRunning(true);
-            }
+                setControls(
+                    (
+                        previous
+                    ) => ({
+                        ...previous,
 
-            if (
-                controlId === "ignition" &&
-                value === "OFF"
-            ) {
-                setEngineRunning(false);
-            }
-
-            if (
-                !currentStep ||
-                isChecklistComplete
-            ) {
-                setFeedback(
-                    `${controlId} set to ${value}.`
+                        [
+                            controlId
+                        ]:
+                            value,
+                    })
                 );
-                return;
-            }
 
-            if (
-                currentStep.type === "manual" ||
-                currentStep.type === "future"
-            ) {
-                setFeedback(
-                    `${getOptionLabel(
-                        controlId,
-                        value
-                    )} selected. Current checklist step requires manual confirmation.`
-                );
-                return;
-            }
 
-            if (currentStep.type === "control") {
+                /* =============================================
+                   SAVE LAST INPUT
+                   ============================================= */
+
+                setLastEvent({
+                    controlId,
+                    value,
+                    source,
+                    timestamp:
+                        Date.now(),
+                });
+
+
+                /* =============================================
+                   GRADING SYSTEM
+
+                   THIS IS THE MAIN CHECKLIST GRADING HOOK.
+
+                   It receives the SAME input regardless of:
+
+                   React UI
+                   Raspberry Pi
+                   GPIO
+                   WebSocket
+                   Python
+
+                   The grading service determines:
+
+                   correct input
+                   incorrect setting
+                   out of sequence
+                   sequence error
+                   attempt number
+                   recovery attempt
+                   ============================================= */
+
+                recordChecklistControlInput({
+                    step:
+                        currentStep,
+
+                    controlId,
+
+                    value,
+
+                    source,
+                });
+
+
+                /* =============================================
+                   SIMPLE ENGINE SIMULATION
+
+                   Frontend demonstration only.
+                   ============================================= */
+
                 if (
-                    currentStep.controlId !== controlId
+                    controlId ===
+                        "ignition" &&
+                    value ===
+                        "START"
+                ) {
+                    setEngineRunning(
+                        true
+                    );
+                }
+
+
+                if (
+                    controlId ===
+                        "ignition" &&
+                    value ===
+                        "OFF"
+                ) {
+                    setEngineRunning(
+                        false
+                    );
+                }
+
+
+                /* =============================================
+                   NO ACTIVE CHECKLIST STEP
+                   ============================================= */
+
+                if (
+                    !currentStep ||
+                    isChecklistComplete
+                ) {
+                    setFeedback(
+                        `${controlId} set to ${value}.`
+                    );
+
+
+                    return;
+                }
+
+
+                /* =============================================
+                   MANUAL / FUTURE STEP
+
+                   Operating physical controls while a manual
+                   confirmation is expected does not complete
+                   the current step.
+                   ============================================= */
+
+                if (
+                    currentStep.type ===
+                        "manual" ||
+                    currentStep.type ===
+                        "future"
                 ) {
                     setFeedback(
                         `${getOptionLabel(
                             controlId,
                             value
-                        )} selected. Current step is "${currentStep.title}".`
+                        )} selected. Current checklist step requires manual confirmation.`
                     );
+
+
                     return;
                 }
 
-                const correct = matchesExpected(
-                    currentStep.expected,
-                    value
-                );
 
-                if (correct) {
-                    completeStep(currentStep);
-                    return;
-                }
+                /* =================================================
+                   NORMAL CONTROL STEP
+                   ================================================= */
 
-                setMistakes((previous) => [
-                    ...previous,
-                    {
-                        id: Date.now(),
-                        stepId: currentStep.id,
-                        controlId,
-                        value,
-                    },
-                ]);
-
-                setFeedback(
-                    `Incorrect setting for ${currentStep.title}. Expected: ${currentStep.expectedLabel}.`
-                );
-
-                return;
-            }
-
-            if (currentStep.type === "sequence") {
                 if (
-                    currentStep.controlId !== controlId
+                    currentStep.type ===
+                    "control"
                 ) {
-                    return;
-                }
+                    /* ---------------------------------------------
+                       WRONG CONTROL OPERATED
 
-                const expectedValue =
-                    currentStep.sequence[
-                    sequenceProgress
-                    ];
+                       Example:
 
-                if (value === expectedValue) {
-                    const nextProgress =
-                        sequenceProgress + 1;
+                       Expected:
+                       Fuel Pump
+
+                       Student operates:
+                       Landing Light
+
+                       Grading already records this as:
+                       OUT_OF_SEQUENCE
+                       --------------------------------------------- */
 
                     if (
-                        nextProgress >=
-                        currentStep.sequence.length
+                        currentStep
+                            .controlId !==
+                        controlId
                     ) {
-                        completeStep(currentStep);
+                        setFeedback(
+                            `${getOptionLabel(
+                                controlId,
+                                value
+                            )} selected. Current step is "${currentStep.title}".`
+                        );
+
+
                         return;
                     }
 
-                    setSequenceProgress(nextProgress);
 
-                    const nextExpected =
-                        currentStep.sequence[
-                        nextProgress
-                        ];
+                    /* ---------------------------------------------
+                       CHECK VALUE
+                       --------------------------------------------- */
+
+                    const correct =
+                        matchesExpected(
+                            currentStep
+                                .expected,
+
+                            value
+                        );
+
+
+                    /* ---------------------------------------------
+                       CORRECT
+                       --------------------------------------------- */
+
+                    if (
+                        correct
+                    ) {
+                        completeStep(
+                            currentStep,
+                            source
+                        );
+
+
+                        return;
+                    }
+
+
+                    /* ---------------------------------------------
+                       WRONG SETTING
+
+                       Existing mistakes array remains intact.
+                       --------------------------------------------- */
+
+                    setMistakes(
+                        (
+                            previous
+                        ) => [
+                            ...previous,
+
+                            {
+                                id:
+                                    Date.now(),
+
+                                stepId:
+                                    currentStep.id,
+
+                                controlId,
+
+                                value,
+                            },
+                        ]
+                    );
+
 
                     setFeedback(
-                        `Correct. Next required position: ${getOptionLabel(
-                            controlId,
-                            nextExpected
-                        )}.`
+                        `Incorrect setting for ${currentStep.title}. Expected: ${currentStep.expectedLabel}.`
                     );
+
 
                     return;
                 }
 
-                setMistakes((previous) => [
-                    ...previous,
-                    {
-                        id: Date.now(),
-                        stepId: currentStep.id,
-                        controlId,
-                        value,
-                    },
-                ]);
+
+                /* =================================================
+                   SEQUENCE STEP
+                   ================================================= */
 
                 if (
-                    value ===
-                    currentStep.sequence[0]
+                    currentStep.type ===
+                    "sequence"
                 ) {
-                    setSequenceProgress(1);
-                } else {
-                    setSequenceProgress(0);
-                }
+                    /* ---------------------------------------------
+                       WRONG CONTROL
 
-                setFeedback(
-                    `Incorrect sequence. Expected: ${getOptionLabel(
-                        controlId,
+                       Grading has already recorded this as an
+                       out-of-sequence action.
+                       --------------------------------------------- */
+
+                    if (
+                        currentStep
+                            .controlId !==
+                        controlId
+                    ) {
+                        setFeedback(
+                            `${getOptionLabel(
+                                controlId,
+                                value
+                            )} selected. Current step is "${currentStep.title}".`
+                        );
+
+
+                        return;
+                    }
+
+
+                    /* ---------------------------------------------
+                       EXPECTED SEQUENCE VALUE
+                       --------------------------------------------- */
+
+                    const expectedValue =
+                        currentStep
+                            .sequence[
+                            sequenceProgress
+                        ];
+
+
+                    /* ---------------------------------------------
+                       CORRECT SEQUENCE POSITION
+                       --------------------------------------------- */
+
+                    if (
+                        value ===
                         expectedValue
-                    )}.`
-                );
-            }
-        },
-        [
-            completeStep,
-            currentStep,
-            isChecklistComplete,
-            sequenceProgress,
-        ]
-    );
+                    ) {
+                        const nextProgress =
+                            sequenceProgress +
+                            1;
+
+
+                        /* -----------------------------------------
+                           ENTIRE SEQUENCE COMPLETE
+                           ----------------------------------------- */
+
+                        if (
+                            nextProgress >=
+                            currentStep
+                                .sequence
+                                .length
+                        ) {
+                            completeStep(
+                                currentStep,
+                                source
+                            );
+
+
+                            return;
+                        }
+
+
+                        /* -----------------------------------------
+                           CONTINUE SEQUENCE
+                           ----------------------------------------- */
+
+                        setSequenceProgress(
+                            nextProgress
+                        );
+
+
+                        const nextExpected =
+                            currentStep
+                                .sequence[
+                                nextProgress
+                            ];
+
+
+                        setFeedback(
+                            `Correct. Next required position: ${getOptionLabel(
+                                controlId,
+                                nextExpected
+                            )}.`
+                        );
+
+
+                        return;
+                    }
+
+
+                    /* ---------------------------------------------
+                       INCORRECT SEQUENCE
+
+                       Existing simulator mistakes array.
+                       --------------------------------------------- */
+
+                    setMistakes(
+                        (
+                            previous
+                        ) => [
+                            ...previous,
+
+                            {
+                                id:
+                                    Date.now(),
+
+                                stepId:
+                                    currentStep.id,
+
+                                controlId,
+
+                                value,
+                            },
+                        ]
+                    );
+
+
+                    /* ---------------------------------------------
+                       RESTART / RECOVER SEQUENCE
+
+                       Your existing behavior is preserved.
+                       --------------------------------------------- */
+
+                    if (
+                        value ===
+                        currentStep
+                            .sequence[
+                            0
+                        ]
+                    ) {
+                        setSequenceProgress(
+                            1
+                        );
+                    } else {
+                        setSequenceProgress(
+                            0
+                        );
+                    }
+
+
+                    setFeedback(
+                        `Incorrect sequence. Expected: ${getOptionLabel(
+                            controlId,
+                            expectedValue
+                        )}.`
+                    );
+                }
+            },
+            [
+                completeStep,
+                currentStep,
+                isChecklistComplete,
+                sequenceProgress,
+            ]
+        );
+
+
+    /* ========================================================
+       MANUAL CHECKLIST STEP COMPLETE
+
+       Manual checks currently receive COMPLETION credit.
+
+       They are NOT given objective accuracy points because
+       software cannot verify that the student actually
+       inspected something just because Confirm was pressed.
+       ======================================================== */
 
     const markManualStepComplete =
-        useCallback(() => {
-            if (!currentStep) return;
+        useCallback(
+            () => {
+                if (
+                    !currentStep
+                ) {
+                    return;
+                }
 
-            if (
-                currentStep.type === "manual" ||
-                currentStep.type === "future"
-            ) {
-                completeStep(currentStep);
-            }
-        }, [currentStep, completeStep]);
+
+                if (
+                    currentStep.type ===
+                        "manual" ||
+                    currentStep.type ===
+                        "future"
+                ) {
+                    completeStep(
+                        currentStep,
+                        "manual"
+                    );
+                }
+            },
+            [
+                currentStep,
+                completeStep,
+            ]
+        );
+
+
+    /* ========================================================
+       COMMUNICATION CHECKLIST STEP COMPLETE
+
+       The communication itself is graded separately inside
+       CommsTrainingPanel.
+
+       trainingAssessment.js automatically prevents this from
+       being counted again as checklist points.
+
+       This function ONLY moves the checklist to the next item.
+       ======================================================== */
 
     const markCommsStepComplete =
-        useCallback(() => {
-            if (!currentStep) {
-                return;
-            }
+        useCallback(
+            () => {
+                if (
+                    !currentStep
+                ) {
+                    return;
+                }
 
-            if (
-                currentStep.type === "comms"
-            ) {
-                completeStep(
-                    currentStep
-                );
-            }
-        }, [
-            currentStep,
-            completeStep,
-        ]);
 
-    const instruments = useMemo(() => {
-        const voltmeter =
-            controls.master_switch === "ON"
-                ? controls.generator === "ON" &&
+                if (
+                    currentStep.type ===
+                    "comms"
+                ) {
+                    completeStep(
+                        currentStep,
+                        "comms"
+                    );
+                }
+            },
+            [
+                currentStep,
+                completeStep,
+            ]
+        );
+
+
+    /* ========================================================
+       SIMULATED INSTRUMENT VALUES
+
+       Existing frontend/demo logic remains unchanged.
+       ======================================================== */
+
+    const instruments =
+        useMemo(
+            () => {
+                const voltmeter =
+                    controls
+                        .master_switch ===
+                    "ON"
+                        ? controls
+                              .generator ===
+                              "ON" &&
+                          engineRunning
+                            ? "14V"
+                            : "12V"
+                        : "0V";
+
+
+                const ammeter =
+                    controls
+                        .master_switch ===
+                    "ON"
+                        ? controls
+                              .generator ===
+                              "ON" &&
+                          engineRunning
+                            ? "CHARGING"
+                            : "STANDBY"
+                        : "OFF";
+
+
+                const fuelPressure =
+                    controls
+                        .fuel_pump ===
+                    "ON"
+                        ? engineRunning
+                            ? "4.2 PSI"
+                            : "3.1 PSI"
+                        : engineRunning
+                          ? "2.6 PSI"
+                          : "0 PSI";
+
+
+                const oilPressure =
                     engineRunning
-                    ? "14V"
-                    : "12V"
-                : "0V";
+                        ? "4 BARS / GREEN"
+                        : "0 BARS";
 
-        const ammeter =
-            controls.master_switch === "ON"
-                ? controls.generator === "ON" &&
-                    engineRunning
-                    ? "CHARGING"
-                    : "STANDBY"
-                : "OFF";
 
-        const fuelPressure =
-            controls.fuel_pump === "ON"
-                ? engineRunning
-                    ? "4.2 PSI"
-                    : "3.1 PSI"
-                : engineRunning
-                    ? "2.6 PSI"
-                    : "0 PSI";
+                return {
+                    voltmeter,
 
-        const oilPressure =
-            engineRunning
-                ? "4 BARS / GREEN"
-                : "0 BARS";
+                    ammeter,
 
-        return {
-            voltmeter,
-            ammeter,
-            fuelPressure,
-            oilPressure,
-            engineRunning,
-            transponder:
-                controls.transponder,
-            landingLight:
-                controls.landing_light,
-            flaps: controls.flaps,
-            trim: controls.trim,
-        };
-    }, [controls, engineRunning]);
+                    fuelPressure,
+
+                    oilPressure,
+
+                    engineRunning,
+
+                    transponder:
+                        controls
+                            .transponder,
+
+                    landingLight:
+                        controls
+                            .landing_light,
+
+                    flaps:
+                        controls.flaps,
+
+                    trim:
+                        controls.trim,
+                };
+            },
+            [
+                controls,
+                engineRunning,
+            ]
+        );
+
+
+    /* ========================================================
+       CONTEXT VALUE
+       ======================================================== */
 
     const value = {
         controls,
+
         setControl,
 
+
         activeChecklistId,
+
         currentChecklist,
+
         selectChecklist,
 
+
         currentStepIndex,
+
         currentStep,
+
         completedStepIds,
+
         progressPercentage,
+
         isChecklistComplete,
 
+
         sequenceProgress,
+
         markManualStepComplete,
+
         markCommsStepComplete,
 
+
         feedback,
+
         mistakes,
+
         lastEvent,
 
+
         instruments,
+
         engineRunning,
 
+
         resetChecklistProgress,
+
         resetAllControls,
+
         hardResetAll,
     };
 
+
+    /* ========================================================
+       PROVIDER
+       ======================================================== */
+
     return (
         <SimulatorContext.Provider
-            value={value}
+            value={
+                value
+            }
         >
-            {children}
+            {
+                children
+            }
         </SimulatorContext.Provider>
     );
 }
 
-export function useSimulator() {
-    const context = useContext(
-        SimulatorContext
-    );
 
-    if (!context) {
+/* ============================================================
+   USE SIMULATOR HOOK
+   ============================================================ */
+
+export function useSimulator() {
+    const context =
+        useContext(
+            SimulatorContext
+        );
+
+
+    if (
+        !context
+    ) {
         throw new Error(
             "useSimulator must be used inside SimulatorProvider"
         );
     }
+
 
     return context;
 }

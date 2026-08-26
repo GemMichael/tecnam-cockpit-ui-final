@@ -12,6 +12,10 @@ import {
   isCriticalChecklistStep,
 } from "../data/gradingConfig";
 
+import {
+  getSelectedStudent,
+} from "./studentStorage";
+
 
 /* ============================================================
    INTERNAL STORE
@@ -63,6 +67,34 @@ function createEmptySession(
     new Date().toISOString();
 
 
+  const selectedStudent =
+    getSelectedStudent();
+
+
+  const studentMetadata =
+    selectedStudent
+      ? {
+          studentId:
+            selectedStudent.studentId,
+
+          studentNumber:
+            selectedStudent.studentNumber,
+
+          studentName:
+            selectedStudent.name,
+
+          course:
+            selectedStudent.course,
+
+          yearLevel:
+            selectedStudent.yearLevel,
+
+          flightProgress:
+            selectedStudent.flightProgress,
+        }
+      : {};
+
+
   return {
     id:
       createId(
@@ -81,7 +113,10 @@ function createEmptySession(
     status:
       "in_progress",
 
-    metadata,
+    metadata: {
+      ...studentMetadata,
+      ...metadata,
+    },
 
     checklistEvents:
       [],

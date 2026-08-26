@@ -1,9 +1,18 @@
-import { Navigate, Route, Routes } from "react-router";
+import {
+  Navigate,
+  Route,
+  Routes,
+} from "react-router";
 
 import AppShell from "./components/AppShell";
 
-// Simulator state / cockpit control logic
-import { SimulatorProvider } from "./context/SimulatorContext";
+import {
+  SimulatorProvider,
+} from "./context/SimulatorContext";
+
+import {
+  getSelectedStudent,
+} from "./services/studentStorage";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -15,89 +24,264 @@ import HistoryPage from "./pages/History";
 import Leaderboard from "./pages/Leaderboard";
 import Settings from "./pages/Settings";
 import HelpGuide from "./pages/HelpGuide";
-
-// NEW PAGE
+import StudentRegistration from "./pages/StudentRegistration";
 import CockpitControls from "./pages/CockpitControls";
+
+
+/* ============================================================
+   GET LOGGED-IN USER
+   ============================================================ */
+
+function getLoggedInUser() {
+  try {
+    const stored =
+      localStorage.getItem(
+        "tecnamUser"
+      );
+
+
+    if (!stored) {
+      return null;
+    }
+
+
+    return JSON.parse(
+      stored
+    );
+  } catch (
+    error
+  ) {
+    console.warn(
+      "Invalid stored login data.",
+      error
+    );
+
+
+    localStorage.removeItem(
+      "tecnamUser"
+    );
+
+
+    return null;
+  }
+}
+
+
+/* ============================================================
+   PROTECTED APPLICATION
+
+   Student must have BOTH:
+
+   1. tecnamUser
+   2. selected registered student
+
+   Otherwise access is denied.
+
+   This protects:
+
+   /dashboard
+   /controls
+   /checklists
+   /history
+   etc.
+
+   Even if someone manually types the URL.
+   ============================================================ */
+
+function ProtectedApplication() {
+  const user =
+    getLoggedInUser();
+
+
+  const student =
+    getSelectedStudent();
+
+
+  if (
+    !user ||
+    !student ||
+    !student.studentId
+  ) {
+    return (
+      <Navigate
+        to="/"
+        replace
+      />
+    );
+  }
+
+
+  return (
+    <SimulatorProvider>
+      <AppShell />
+    </SimulatorProvider>
+  );
+}
+
+
+/* ============================================================
+   PUBLIC REGISTRATION LAYOUT
+
+   Registration must be accessible before login.
+   ============================================================ */
+
+function RegistrationPage() {
+  return (
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+      <div className="mx-auto max-w-7xl">
+        <StudentRegistration />
+      </div>
+    </div>
+  );
+}
+
+
+/* ============================================================
+   APP
+   ============================================================ */
 
 function App() {
   return (
     <Routes>
-      {/* Login stays outside the main dashboard layout */}
-      <Route path="/" element={<Login />} />
 
-      {/*
-        Main application
+      {/* =====================================================
+          PUBLIC ROUTES
+          ===================================================== */}
 
-        SimulatorProvider is placed here so:
-        - Cockpit Controls
-        - Checklists
-        - Dashboard
-        - Future GPIO
-        - Future Python backend
+      <Route
+        path="/"
+        element={
+          <Login />
+        }
+      />
 
-        can all share the same simulator state.
-      */}
+
+      {/* Registration does NOT require login */}
+
+      <Route
+        path="/register"
+        element={
+          <RegistrationPage />
+        }
+      />
+
+
+      {/* =====================================================
+          PROTECTED APPLICATION
+          ===================================================== */}
+
       <Route
         element={
-          <SimulatorProvider>
-            <AppShell />
-          </SimulatorProvider>
+          <ProtectedApplication />
         }
       >
-        {/* NEW: Virtual cockpit controls */}
+
+        {/* COCKPIT CONTROLS */}
+
         <Route
           path="/controls"
-          element={<CockpitControls />}
+          element={
+            <CockpitControls />
+          }
         />
+
+
+        {/* DASHBOARD */}
 
         <Route
           path="/dashboard"
-          element={<Dashboard />}
+          element={
+            <Dashboard />
+          }
         />
+
+
+        {/* CHECKLIST SELECTION */}
 
         <Route
           path="/checklists"
-          element={<ChooseChecklist />}
+          element={
+            <ChooseChecklist />
+          }
         />
 
-        {/* Opens the selected checklist */}
+
+        {/* CHECKLIST EXECUTION */}
+
         <Route
           path="/checklists/:checklistId"
-          element={<ChecklistExecution />}
+          element={
+            <ChecklistExecution />
+          }
         />
+
+
+        {/* MANUAL */}
 
         <Route
           path="/manual"
-          element={<Manual />}
+          element={
+            <Manual />
+          }
         />
+
+
+        {/* PERFORMANCE */}
 
         <Route
           path="/performance"
-          element={<Performance />}
+          element={
+            <Performance />
+          }
         />
+
+
+        {/* HISTORY */}
 
         <Route
           path="/history"
-          element={<HistoryPage />}
+          element={
+            <HistoryPage />
+          }
         />
+
+
+        {/* LEADERBOARD */}
 
         <Route
           path="/leaderboard"
-          element={<Leaderboard />}
+          element={
+            <Leaderboard />
+          }
         />
+
+
+        {/* SETTINGS */}
 
         <Route
           path="/settings"
-          element={<Settings />}
+          element={
+            <Settings />
+          }
         />
+
+
+        {/* HELP */}
 
         <Route
           path="/help"
-          element={<HelpGuide />}
+          element={
+            <HelpGuide />
+          }
         />
+
       </Route>
 
-      {/* Any invalid URL returns to login */}
+
+      {/* =====================================================
+          INVALID URL
+          ===================================================== */}
+
       <Route
         path="*"
         element={
@@ -107,8 +291,10 @@ function App() {
           />
         }
       />
+
     </Routes>
   );
 }
+
 
 export default App;

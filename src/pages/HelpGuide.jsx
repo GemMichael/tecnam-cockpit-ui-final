@@ -429,7 +429,7 @@ const faqs = [
 
     {
       source: "Cockpit Inspection Checklist",
-      warning: true,
+      warning: false,
     }
   ),
 

@@ -27,34 +27,6 @@ import {
   startNewTrainingSession,
 } from "../services/trainingAssessment";
 
-/* ============================================================
-   FRONTEND-ONLY DEMO ACCOUNT
-
-   FOR CLIENT TESTING ONLY.
-   REMOVE BEFORE PRODUCTION.
-   ============================================================ */
-
-const DEMO_ACCOUNT = {
-  username: "clientdemo",
-  pin: "123456",
-
-  user: {
-    userId: "demo-user-001",
-    username: "clientdemo",
-    role: "Student",
-  },
-
-  student: {
-    studentId: "demo-student-001",
-    userId: "demo-user-001",
-    studentNumber: "DEMO-0001",
-    name: "Demo Student",
-    course: "BS Aviation",
-    yearLevel: "3rd Year",
-    flightProgress: "Demo Training",
-  },
-};
-
 
 function Login() {
   const navigate =
@@ -156,251 +128,153 @@ function Login() {
      LOGIN
      ========================================================== */
 
-async function login(
-  event
-) {
-  event.preventDefault();
-
-  setError("");
-
-  const cleanIdentifier =
-    identifier
-      .trim()
-      .toLowerCase();
-
-
-  if (
-    !cleanIdentifier
+  async function login(
+    event
   ) {
-    setError(
-      "Please enter your username or Student ID."
-    );
-
-    return;
-  }
+    event.preventDefault();
 
 
-  if (
-    pin.length !==
-    6
-  ) {
-    setError(
-      "Please enter your 6-digit PIN."
-    );
-
-    return;
-  }
+    setError("");
 
 
-  /* ==========================================================
-     DEMO LOGIN
-
-     This is checked FIRST.
-
-     No FastAPI.
-     No SQLite.
-     No database connection.
-     ========================================================== */
-
-  if (
-    cleanIdentifier ===
-      DEMO_ACCOUNT.username &&
-    pin ===
-      DEMO_ACCOUNT.pin
-  ) {
-    const student =
-      DEMO_ACCOUNT.student;
-
-    const user =
-      DEMO_ACCOUNT.user;
+    const cleanIdentifier =
+      identifier.trim();
 
 
-    /* Active student required by ProtectedApplication */
+    if (
+      !cleanIdentifier
+    ) {
+      setError(
+        "Please enter your username or Student ID."
+      );
 
-    setSelectedStudent(
-      student
+      return;
+    }
+
+
+    if (
+      pin.length !==
+      6
+    ) {
+      setError(
+        "Please enter your 6-digit PIN."
+      );
+
+      return;
+    }
+
+
+    setLoading(
+      true
     );
 
 
-    /* Login information */
+    try {
+      const result =
+        await loginStudent({
+          identifier:
+            cleanIdentifier,
 
-    localStorage.setItem(
-      "tecnamUser",
+          pin,
+        });
 
-      JSON.stringify({
-        userId:
-          user.userId,
 
-        username:
-          user.username,
+      const student =
+        result.student;
 
-        role:
-          user.role,
 
+      const user =
+        result.user;
+
+
+      /* ======================================================
+         ACTIVE STUDENT
+         ====================================================== */
+
+      setSelectedStudent(
+        student
+      );
+
+
+      /* ======================================================
+         LOGIN SESSION
+
+         PIN is NEVER saved here.
+         ====================================================== */
+
+      localStorage.setItem(
+        "tecnamUser",
+
+        JSON.stringify({
+          userId:
+            user.userId,
+
+          username:
+            user.username,
+
+          role:
+            user.role,
+
+          studentId:
+            student.studentId,
+
+          studentNumber:
+            student.studentNumber,
+
+          name:
+            student.name,
+        })
+      );
+
+
+      /* ======================================================
+         NEW TRAINING SESSION
+         ====================================================== */
+
+      startNewTrainingSession({
         studentId:
           student.studentId,
 
         studentNumber:
           student.studentNumber,
 
-        name:
+        studentName:
           student.name,
 
-        isDemo:
-          true,
-      })
-    );
+        username:
+          user.username,
 
+        course:
+          student.course,
 
-    /* Start isolated demo training session */
+        yearLevel:
+          student.yearLevel,
 
-    startNewTrainingSession({
-      studentId:
-        student.studentId,
-
-      studentNumber:
-        student.studentNumber,
-
-      studentName:
-        student.name,
-
-      username:
-        user.username,
-
-      course:
-        student.course,
-
-      yearLevel:
-        student.yearLevel,
-
-      flightProgress:
-        student.flightProgress,
-
-      isDemo:
-        true,
-    });
-
-
-    navigate(
-      "/dashboard",
-      {
-        replace:
-          true,
-      }
-    );
-
-
-    return;
-  }
-
-
-  /* ==========================================================
-     NORMAL DATABASE LOGIN
-
-     If it is NOT the demo account,
-     continue with the real SQLite account authentication.
-     ========================================================== */
-
-  setLoading(
-    true
-  );
-
-
-  try {
-    const result =
-      await loginStudent({
-        identifier:
-          identifier.trim(),
-
-        pin,
+        flightProgress:
+          student.flightProgress,
       });
 
 
-    const student =
-      result.student;
-
-
-    const user =
-      result.user;
-
-
-    setSelectedStudent(
-      student
-    );
-
-
-    localStorage.setItem(
-      "tecnamUser",
-
-      JSON.stringify({
-        userId:
-          user.userId,
-
-        username:
-          user.username,
-
-        role:
-          user.role,
-
-        studentId:
-          student.studentId,
-
-        studentNumber:
-          student.studentNumber,
-
-        name:
-          student.name,
-
-        isDemo:
-          false,
-      })
-    );
-
-
-    startNewTrainingSession({
-      studentId:
-        student.studentId,
-
-      studentNumber:
-        student.studentNumber,
-
-      studentName:
-        student.name,
-
-      username:
-        user.username,
-
-      course:
-        student.course,
-
-      yearLevel:
-        student.yearLevel,
-
-      flightProgress:
-        student.flightProgress,
-    });
-
-
-    navigate(
-      "/dashboard",
-      {
-        replace:
-          true,
-      }
-    );
-  } catch (
-    loginError
-  ) {
-    setError(
-      loginError.message ||
-        "Login failed."
-    );
-  } finally {
-    setLoading(
-      false
-    );
+      navigate(
+        "/dashboard",
+        {
+          replace:
+            true,
+        }
+      );
+    } catch (
+      loginError
+    ) {
+      setError(
+        loginError.message ||
+          "Login failed."
+      );
+    } finally {
+      setLoading(
+        false
+      );
+    }
   }
-}
 
 
   function handlePinChange(
@@ -565,7 +439,7 @@ async function login(
 
 
               <h2 className="mt-3 text-4xl font-bold tracking-tight">
-                Student Login (for testing only: use demo account. User: "clientdemo" PIN "123456")
+                Student Login
               </h2>
 
 

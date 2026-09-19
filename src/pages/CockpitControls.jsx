@@ -19,6 +19,8 @@ import TrainingScoreCard from "../components/TrainingScoreCard";
 
 import { useSimulator } from "../context/SimulatorContext";
 
+import SimulatedInstrumentPanel from "../components/SimulatedInstrumentPanel";
+
 /* ============================================================
    COCKPIT CONTROL BUTTONS
 
@@ -63,11 +65,10 @@ function CockpitControl({
 
       {/* BUTTON OPTIONS */}
       <div
-        className={`grid gap-1.5 ${
-          control.options.length >= 3
+        className={`grid gap-1.5 ${control.options.length >= 3
             ? "grid-cols-3"
             : "grid-cols-2"
-        }`}
+          }`}
       >
         {control.options.map((option) => {
           const active =
@@ -97,9 +98,8 @@ function CockpitControl({
                 duration-150
                 active:translate-y-[1px]
 
-                ${
-                  active
-                    ? `
+                ${active
+                  ? `
                       border-emerald-300
                       bg-gradient-to-b
                       from-emerald-400
@@ -107,7 +107,7 @@ function CockpitControl({
                       text-white
                       shadow-[0_0_14px_rgba(52,211,153,.4)]
                     `
-                    : `
+                  : `
                       border-black/60
                       bg-gradient-to-b
                       from-[#50565d]
@@ -497,7 +497,7 @@ function CockpitControlsPage() {
                       control={control}
                       value={
                         controls[
-                          control.id
+                        control.id
                         ]
                       }
                       onChange={setControl}
@@ -527,7 +527,7 @@ function CockpitControlsPage() {
                         control={control}
                         value={
                           controls[
-                            control.id
+                          control.id
                           ]
                         }
                         onChange={setControl}
@@ -551,7 +551,7 @@ function CockpitControlsPage() {
                         control={control}
                         value={
                           controls[
-                            control.id
+                          control.id
                           ]
                         }
                         onChange={setControl}
@@ -580,7 +580,7 @@ function CockpitControlsPage() {
                         control={control}
                         value={
                           controls[
-                            control.id
+                          control.id
                           ]
                         }
                         onChange={setControl}
@@ -608,7 +608,7 @@ function CockpitControlsPage() {
                         control={control}
                         value={
                           controls[
-                            control.id
+                          control.id
                           ]
                         }
                         onChange={setControl}
@@ -662,13 +662,11 @@ function CockpitControlsPage() {
         <div className="space-y-6">
           <div className="sticky top-24 space-y-6">
 
+            <SimulatedInstrumentPanel />
+
             <ChecklistPanel />
 
             <TrainingScoreCard />
-
-            {/* GPIO INFORMATION */}
-
-
 
           </div>
         </div>

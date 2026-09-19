@@ -36,6 +36,83 @@ const manualStep = ({
   note,
 });
 
+const instrumentStep = ({
+  id,
+  title,
+  instruction,
+
+  instrumentKey,
+  instrumentLabel,
+
+  unit = "",
+
+  gaugeMin = 0,
+  gaugeMax = 100,
+
+  check,
+
+  startValue = 0,
+  normalValue,
+
+  settleSeconds = 3,
+
+  note,
+}) => ({
+  id,
+
+  type:
+    "instrument",
+
+  title,
+  instruction,
+
+  instrumentKey,
+  instrumentLabel,
+
+  unit,
+
+  gaugeMin,
+  gaugeMax,
+
+  check,
+
+  startValue,
+  normalValue,
+
+  settleSeconds,
+
+  note,
+});
+
+
+const timedStep = ({
+  id,
+  title,
+  instruction,
+
+  durationSeconds,
+
+  requiredControlId,
+  requiredValue,
+  requiredLabel,
+
+  note,
+}) => ({
+  id,
+  type: "timed",
+
+  title,
+  instruction,
+
+  durationSeconds,
+
+  requiredControlId,
+  requiredValue,
+  requiredLabel,
+
+  note,
+});
+
 const futureStep = ({
   id,
   title,
@@ -608,17 +685,51 @@ export const checklists = [
       // -------------------------------------------------------
       // 12V
       // -------------------------------------------------------
-      manualStep({
-        id: "es-2",
+ instrumentStep({
+  id:
+    "es-2",
 
-        title: "Voltmeter",
+  title:
+    "Voltmeter",
 
-        instruction:
-          "Check that the voltmeter indicates 12 volts.",
+  instruction:
+    "Observe the voltmeter indication.",
 
-        actionLabel:
-          "Confirm 12 Volts",
-      }),
+  instrumentKey:
+    "voltmeter",
+
+  instrumentLabel:
+    "VOLTMETER",
+
+  unit:
+    "V",
+
+  gaugeMin:
+    0,
+
+  gaugeMax:
+    18,
+
+  check: {
+    type:
+      "exact",
+
+    value:
+      12,
+  },
+
+  startValue:
+    0,
+
+  normalValue:
+    12,
+
+  settleSeconds:
+    2,
+
+  note:
+    "The configured checklist indication is 12 volts.",
+}),
 
       // -------------------------------------------------------
       // AMMETER
@@ -802,19 +913,51 @@ export const checklists = [
       // -------------------------------------------------------
       // OIL PRESSURE
       // -------------------------------------------------------
-      manualStep({
-        id: "es-12",
+ instrumentStep({
+  id:
+    "es-12",
 
-        title:
-          "Oil Pressure",
+  title:
+    "Oil Pressure",
 
-        instruction:
-          "Check that oil pressure indicates 4 bars and is on green.",
+  instruction:
+    "Observe the oil pressure indication after engine start.",
 
-        actionLabel:
-          "Confirm 4 Bars / Green",
-      }),
+  instrumentKey:
+    "oilPressure",
 
+  instrumentLabel:
+    "OIL PRESS",
+
+  unit:
+    "bar",
+
+  gaugeMin:
+    0,
+
+  gaugeMax:
+    7,
+
+  check: {
+    type:
+      "exact",
+
+    value:
+      4,
+  },
+
+  startValue:
+    0,
+
+  normalValue:
+    4,
+
+  settleSeconds:
+    3,
+
+  note:
+    "The configured checklist indication is 4 bars.",
+}),
       // -------------------------------------------------------
       // SOURCE CHOKE/CHOCK WORDING
       // -------------------------------------------------------
@@ -872,17 +1015,51 @@ export const checklists = [
       // -------------------------------------------------------
       // 14V
       // -------------------------------------------------------
-      manualStep({
-        id: "es-16",
+instrumentStep({
+  id:
+    "es-16",
 
-        title: "Voltmeter",
+  title:
+    "Voltmeter",
 
-        instruction:
-          "Check that the voltmeter indicates 14 volts and is on green.",
+  instruction:
+    "Observe the voltmeter indication after the Generator is switched on.",
 
-        actionLabel:
-          "Confirm 14V / Green",
-      }),
+  instrumentKey:
+    "voltmeter",
+
+  instrumentLabel:
+    "VOLTMETER",
+
+  unit:
+    "V",
+
+  gaugeMin:
+    0,
+
+  gaugeMax:
+    18,
+
+  check: {
+    type:
+      "exact",
+
+    value:
+      14,
+  },
+
+  startValue:
+    12,
+
+  normalValue:
+    14,
+
+  settleSeconds:
+    2,
+
+  note:
+    "The configured checklist indication is 14 volts.",
+}),
 
       // -------------------------------------------------------
       // ENGINE INSTRUMENTS
@@ -899,6 +1076,8 @@ export const checklists = [
         actionLabel:
           "Confirm Instruments Green",
       }),
+
+
 
       // -------------------------------------------------------
       // 1000-1200 RPM
@@ -1223,66 +1402,193 @@ export const checklists = [
       // -------------------------------------------------------
       // OIL TEMP
       // -------------------------------------------------------
-      manualStep({
-        id: "ru-2",
+instrumentStep({
+  id:
+    "ru-2",
 
-        title:
-          "Oil Temperature",
+  title:
+    "Oil Temperature",
 
-        instruction:
-          "Check oil temperature: 50–110 °C, on green.",
+  instruction:
+    "Observe the oil-temperature indication.",
 
-        actionLabel:
-          "Confirm Oil Temperature",
-      }),
+  instrumentKey:
+    "oilTemperature",
 
+  instrumentLabel:
+    "OIL TEMP",
+
+  unit:
+    "°C",
+
+  gaugeMin:
+    0,
+
+  gaugeMax:
+    140,
+
+  check: {
+    type:
+      "range",
+
+    min:
+      50,
+
+    max:
+      110,
+  },
+
+  startValue:
+    65,
+
+  normalValue:
+    82,
+
+  settleSeconds:
+    3,
+}),
       // -------------------------------------------------------
       // CHT
       // -------------------------------------------------------
-      manualStep({
-        id: "ru-3",
+instrumentStep({
+  id:
+    "ru-3",
 
-        title:
-          "Cylinder Heat Temperature",
+  title:
+    "Cylinder Head Temperature",
 
-        instruction:
-          "Check cylinder heat temperature. Maximum: 135 °C.",
+  instruction:
+    "Observe the cylinder-head-temperature indication.",
 
-        actionLabel:
-          "Confirm CHT",
-      }),
+  instrumentKey:
+    "cht",
 
+  instrumentLabel:
+    "CHT",
+
+  unit:
+    "°C",
+
+  gaugeMin:
+    0,
+
+  gaugeMax:
+    160,
+
+  check: {
+    type:
+      "max",
+
+    max:
+      135,
+  },
+
+  startValue:
+    88,
+
+  normalValue:
+    105,
+
+  settleSeconds:
+    3,
+}),
       // -------------------------------------------------------
       // OIL PRESSURE
       // -------------------------------------------------------
-      manualStep({
-        id: "ru-4",
+ instrumentStep({
+  id:
+    "ru-4",
 
-        title:
-          "Oil Pressure",
+  title:
+    "Oil Pressure",
 
-        instruction:
-          "Check oil pressure: 2 to 5 bars on green.",
+  instruction:
+    "Observe the oil-pressure indication.",
 
-        actionLabel:
-          "Confirm Oil Pressure",
-      }),
+  instrumentKey:
+    "oilPressure",
+
+  instrumentLabel:
+    "OIL PRESS",
+
+  unit:
+    "bar",
+
+  gaugeMin:
+    0,
+
+  gaugeMax:
+    7,
+
+  check: {
+    type:
+      "range",
+
+    min:
+      2,
+
+    max:
+      5,
+  },
+
+  startValue:
+    3.1,
+
+  normalValue:
+    3.8,
+
+  settleSeconds:
+    2,
+}),
 
       // -------------------------------------------------------
       // FUEL PRESSURE
       // -------------------------------------------------------
-      manualStep({
-        id: "ru-5",
+ instrumentStep({
+  id:
+    "ru-5",
 
-        title:
-          "Fuel Pressure",
+  title:
+    "Fuel Pressure",
 
-        instruction:
-          "Check fuel pressure: 2.2 to 5.8 PSI on green.",
+  instruction:
+    "Observe the fuel-pressure indication.",
 
-        actionLabel:
-          "Confirm Fuel Pressure",
-      }),
+  instrumentKey:
+    "fuelPressure",
+
+  instrumentLabel:
+    "FUEL PRESS",
+
+  unit:
+    "PSI",
+
+  gaugeMin:
+    0,
+
+  gaugeMax:
+    8,
+
+  check: {
+    type:
+      "range",
+
+    min:
+      2.2,
+
+    max:
+      5.8,
+  },
+
+  startValue:
+    2.8,
+
+  normalValue:
+    4.1,
+
+  settleSeconds:
+    2,
+}),
 
       // -------------------------------------------------------
       // GENERATOR TEST
@@ -2010,20 +2316,28 @@ export const checklists = [
       // -------------------------------------------------------
       // ONE MINUTE
       // -------------------------------------------------------
-      manualStep({
+      timedStep({
         id: "sd-3",
 
         title:
           "One Minute Cool Down",
 
         instruction:
-          "Keep the engine running at 1,000 to 1,200 RPM for 1 minute in order to reduce latent heat.",
+          "Maintain 1,000 to 1,200 RPM continuously for one minute.",
 
-        actionLabel:
-          "Confirm 1 Minute Complete",
+        durationSeconds: 60,
+
+        requiredControlId:
+          "throttle",
+
+        requiredValue:
+          "1000_1200",
+
+        requiredLabel:
+          "1,000–1,200 RPM",
 
         note:
-          "A real one-minute timer can be implemented later.",
+          "The timer resets if the required RPM condition is not maintained.",
       }),
 
       // -------------------------------------------------------

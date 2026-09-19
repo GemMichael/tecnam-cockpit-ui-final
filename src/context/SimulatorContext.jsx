@@ -202,7 +202,7 @@ export function SimulatorProvider({
 
     const currentStep =
         currentChecklist.steps[
-            currentStepIndex
+        currentStepIndex
         ] || null;
 
 
@@ -224,12 +224,12 @@ export function SimulatorProvider({
             .length === 0
             ? 0
             : Math.round(
-                  (
-                      completedStepIds.length /
-                      currentChecklist.steps.length
-                  ) *
-                      100
-              );
+                (
+                    completedStepIds.length /
+                    currentChecklist.steps.length
+                ) *
+                100
+            );
 
 
     /* ========================================================
@@ -631,9 +631,9 @@ export function SimulatorProvider({
 
                 if (
                     controlId ===
-                        "ignition" &&
+                    "ignition" &&
                     value ===
-                        "START"
+                    "START"
                 ) {
                     setEngineRunning(
                         true
@@ -643,9 +643,9 @@ export function SimulatorProvider({
 
                 if (
                     controlId ===
-                        "ignition" &&
+                    "ignition" &&
                     value ===
-                        "OFF"
+                    "OFF"
                 ) {
                     setEngineRunning(
                         false
@@ -680,9 +680,9 @@ export function SimulatorProvider({
 
                 if (
                     currentStep.type ===
-                        "manual" ||
+                    "manual" ||
                     currentStep.type ===
-                        "future"
+                    "future"
                 ) {
                     setFeedback(
                         `${getOptionLabel(
@@ -776,20 +776,20 @@ export function SimulatorProvider({
                         (
                             previous
                         ) => [
-                            ...previous,
+                                ...previous,
 
-                            {
-                                id:
-                                    Date.now(),
+                                {
+                                    id:
+                                        Date.now(),
 
-                                stepId:
-                                    currentStep.id,
+                                    stepId:
+                                        currentStep.id,
 
-                                controlId,
+                                    controlId,
 
-                                value,
-                            },
-                        ]
+                                    value,
+                                },
+                            ]
                     );
 
 
@@ -841,7 +841,7 @@ export function SimulatorProvider({
                     const expectedValue =
                         currentStep
                             .sequence[
-                            sequenceProgress
+                        sequenceProgress
                         ];
 
 
@@ -890,7 +890,7 @@ export function SimulatorProvider({
                         const nextExpected =
                             currentStep
                                 .sequence[
-                                nextProgress
+                            nextProgress
                             ];
 
 
@@ -916,20 +916,20 @@ export function SimulatorProvider({
                         (
                             previous
                         ) => [
-                            ...previous,
+                                ...previous,
 
-                            {
-                                id:
-                                    Date.now(),
+                                {
+                                    id:
+                                        Date.now(),
 
-                                stepId:
-                                    currentStep.id,
+                                    stepId:
+                                        currentStep.id,
 
-                                controlId,
+                                    controlId,
 
-                                value,
-                            },
-                        ]
+                                    value,
+                                },
+                            ]
                     );
 
 
@@ -943,7 +943,7 @@ export function SimulatorProvider({
                         value ===
                         currentStep
                             .sequence[
-                            0
+                        0
                         ]
                     ) {
                         setSequenceProgress(
@@ -995,9 +995,9 @@ export function SimulatorProvider({
 
                 if (
                     currentStep.type ===
-                        "manual" ||
+                    "manual" ||
                     currentStep.type ===
-                        "future"
+                    "future"
                 ) {
                     completeStep(
                         currentStep,
@@ -1010,6 +1010,111 @@ export function SimulatorProvider({
                 completeStep,
             ]
         );
+
+    const confirmInstrumentStep =
+        useCallback(
+            () => {
+                /*
+                 * INSTRUMENT CONFIRMATION
+                 *
+                 * The SimulatedInstrumentPanel does not enable
+                 * "Confirm Reading" until the needle has finished
+                 * moving and reached the configured normal value.
+                 *
+                 * Because of that, this function does not perform
+                 * a second numeric comparison. It only completes
+                 * the CURRENT instrument checklist step.
+                 *
+                 * All other checklist, grading, comms, timer,
+                 * GPIO-ready, and simulator logic remains unchanged.
+                 */
+
+                if (
+                    !currentStep ||
+                    currentStep.type !==
+                    "instrument"
+                ) {
+                    return false;
+                }
+
+
+                completeStep(
+                    currentStep,
+                    "instrument"
+                );
+
+
+                return true;
+            },
+            [
+                currentStep,
+                completeStep,
+            ]
+        );
+
+
+    const recordTimedStepViolation =
+        useCallback(
+            ({
+                reason,
+                value,
+            }) => {
+                if (
+                    !currentStep ||
+                    currentStep.type !==
+                    "timed"
+                ) {
+                    return;
+                }
+
+                setMistakes(
+                    (previous) => [
+                        ...previous,
+                        {
+                            id: Date.now(),
+
+                            type:
+                                "timed",
+
+                            stepId:
+                                currentStep.id,
+
+                            title:
+                                currentStep.title,
+
+                            reason,
+                            value,
+                        },
+                    ]
+                );
+
+                setFeedback(
+                    reason
+                );
+            },
+            [
+                currentStep,
+            ]
+        );
+
+
+    const markTimedStepComplete =
+        useCallback(() => {
+            if (
+                !currentStep ||
+                currentStep.type !==
+                "timed"
+            ) {
+                return;
+            }
+
+            completeStep(
+                currentStep
+            );
+        }, [
+            currentStep,
+            completeStep,
+        ]);
 
 
     /* ========================================================
@@ -1063,11 +1168,11 @@ export function SimulatorProvider({
                 const voltmeter =
                     controls
                         .master_switch ===
-                    "ON"
+                        "ON"
                         ? controls
-                              .generator ===
-                              "ON" &&
-                          engineRunning
+                            .generator ===
+                            "ON" &&
+                            engineRunning
                             ? "14V"
                             : "12V"
                         : "0V";
@@ -1076,11 +1181,11 @@ export function SimulatorProvider({
                 const ammeter =
                     controls
                         .master_switch ===
-                    "ON"
+                        "ON"
                         ? controls
-                              .generator ===
-                              "ON" &&
-                          engineRunning
+                            .generator ===
+                            "ON" &&
+                            engineRunning
                             ? "CHARGING"
                             : "STANDBY"
                         : "OFF";
@@ -1089,13 +1194,13 @@ export function SimulatorProvider({
                 const fuelPressure =
                     controls
                         .fuel_pump ===
-                    "ON"
+                        "ON"
                         ? engineRunning
                             ? "4.2 PSI"
                             : "3.1 PSI"
                         : engineRunning
-                          ? "2.6 PSI"
-                          : "0 PSI";
+                            ? "2.6 PSI"
+                            : "0 PSI";
 
 
                 const oilPressure =
@@ -1152,6 +1257,9 @@ export function SimulatorProvider({
         currentChecklist,
 
         selectChecklist,
+        confirmInstrumentStep,
+        recordTimedStepViolation,
+        markTimedStepComplete,
 
 
         currentStepIndex,

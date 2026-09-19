@@ -1132,6 +1132,9 @@ function hasRunwayWord(
     "one way",
     "oneway",
 
+    "run",
+    "way",
+
     /* Possible Whisper pronunciation variants */
     "run wei",
     "run whey",
@@ -1633,6 +1636,7 @@ function hasAltimeter2995(
 
     "celtimeter",
     "celtimter",
+    "centimter",
 
     "eltimeter",
     "ultimeter",

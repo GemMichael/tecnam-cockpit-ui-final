@@ -22,6 +22,8 @@ import {
   registerStudent,
 } from "../services/studentStorage";
 
+import TouchKeyboard from "../components/TouchKeyboard";
+
 
 const EMPTY_FORM = {
   name: "",
@@ -77,15 +79,94 @@ function StudentRegistration() {
   ] = useState(false);
 
 
-  function handleChange(
+  /* ==========================================================
+     TOUCHSCREEN KEYBOARD
+     ========================================================== */
+
+  const [
+    activeKeyboardField,
+    setActiveKeyboardField,
+  ] = useState(null);
+
+
+  function isTouchCapable() {
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return false;
+    }
+
+
+    return (
+      navigator.maxTouchPoints >
+        0 ||
+      window.matchMedia?.(
+        "(pointer: coarse)"
+      )?.matches
+    );
+  }
+
+
+  function openTouchKeyboard(
+    fieldName,
     event
   ) {
-    const {
-      name,
-      value,
-    } = event.target;
+    if (
+      !isTouchCapable()
+    ) {
+      return;
+    }
 
 
+    setActiveKeyboardField(
+      fieldName
+    );
+
+
+    const target =
+      event.currentTarget;
+
+
+    window.setTimeout(
+      () => {
+        target
+          ?.scrollIntoView?.({
+            behavior:
+              "smooth",
+
+            block:
+              "center",
+          });
+      },
+      80
+    );
+  }
+
+
+  function closeTouchKeyboard() {
+    setActiveKeyboardField(
+      null
+    );
+
+
+    if (
+      document.activeElement instanceof
+      HTMLElement
+    ) {
+      document.activeElement.blur();
+    }
+  }
+
+
+  /* ==========================================================
+     FORM VALUE NORMALIZATION
+     ========================================================== */
+
+  function normalizeFieldValue(
+    name,
+    value
+  ) {
     let nextValue =
       value;
 
@@ -129,6 +210,21 @@ function StudentRegistration() {
     }
 
 
+    return nextValue;
+  }
+
+
+  function updateFieldValue(
+    name,
+    value
+  ) {
+    const nextValue =
+      normalizeFieldValue(
+        name,
+        value
+      );
+
+
     setForm(
       (
         previous
@@ -144,6 +240,26 @@ function StudentRegistration() {
     setError("");
   }
 
+
+  function handleChange(
+    event
+  ) {
+    const {
+      name,
+      value,
+    } = event.target;
+
+
+    updateFieldValue(
+      name,
+      value
+    );
+  }
+
+
+  /* ==========================================================
+     REGISTRATION
+     ========================================================== */
 
   async function handleSubmit(
     event
@@ -167,6 +283,7 @@ function StudentRegistration() {
         "Please complete all registration fields."
       );
 
+
       return;
     }
 
@@ -178,6 +295,7 @@ function StudentRegistration() {
       setError(
         "Username must contain at least 3 characters."
       );
+
 
       return;
     }
@@ -192,6 +310,7 @@ function StudentRegistration() {
         "Username may only contain letters, numbers, and underscores."
       );
 
+
       return;
     }
 
@@ -204,6 +323,7 @@ function StudentRegistration() {
         "PIN must contain exactly 6 digits."
       );
 
+
       return;
     }
 
@@ -215,6 +335,7 @@ function StudentRegistration() {
       setError(
         "PIN and Confirm PIN do not match."
       );
+
 
       return;
     }
@@ -287,9 +408,11 @@ function StudentRegistration() {
         <div className="w-full max-w-lg rounded-[32px] border border-white/60 bg-white p-8 shadow-xl">
 
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+
             <CheckCircle2
               size={30}
             />
+
           </div>
 
 
@@ -318,6 +441,7 @@ function StudentRegistration() {
           <div className="mt-7 space-y-3 rounded-2xl bg-slate-50 p-5">
 
             <div className="flex justify-between gap-4">
+
               <span className="text-sm text-slate-400">
                 Student ID
               </span>
@@ -327,10 +451,12 @@ function StudentRegistration() {
                   registered.studentNumber
                 }
               </strong>
+
             </div>
 
 
             <div className="flex justify-between gap-4">
+
               <span className="text-sm text-slate-400">
                 Username
               </span>
@@ -340,10 +466,12 @@ function StudentRegistration() {
                   registered.username
                 }
               </strong>
+
             </div>
 
 
             <div className="flex justify-between gap-4">
+
               <span className="text-sm text-slate-400">
                 Course
               </span>
@@ -353,10 +481,12 @@ function StudentRegistration() {
                   registered.course
                 }
               </strong>
+
             </div>
 
 
             <div className="flex justify-between gap-4">
+
               <span className="text-sm text-slate-400">
                 Year Level
               </span>
@@ -366,10 +496,12 @@ function StudentRegistration() {
                   registered.yearLevel
                 }
               </strong>
+
             </div>
 
 
             <div className="flex justify-between gap-4">
+
               <span className="text-sm text-slate-400">
                 Flight Progress
               </span>
@@ -379,6 +511,7 @@ function StudentRegistration() {
                   registered.flightProgress
                 }
               </strong>
+
             </div>
 
           </div>
@@ -419,7 +552,18 @@ function StudentRegistration() {
      ========================================================== */
 
   return (
-    <div className="min-h-screen bg-[#eaf4ff] px-6 py-10">
+    <div
+      className="min-h-screen bg-[#eaf4ff] px-6 py-10"
+
+      style={
+        activeKeyboardField
+          ? {
+              paddingBottom:
+                "380px",
+            }
+          : undefined
+      }
+    >
 
       <div className="mx-auto max-w-3xl">
 
@@ -451,9 +595,11 @@ function StudentRegistration() {
             <div className="flex items-center gap-4">
 
               <div className="rounded-2xl bg-white/10 p-3">
+
                 <UserPlus
                   size={25}
                 />
+
               </div>
 
 
@@ -504,18 +650,23 @@ function StudentRegistration() {
             <div>
 
               <div className="mb-5 flex items-center gap-2">
+
                 <GraduationCap
                   size={18}
                   className="text-blue-600"
                 />
 
+
                 <h2 className="font-bold text-slate-900">
                   Student Information
                 </h2>
+
               </div>
 
 
               <div className="grid gap-5 md:grid-cols-2">
+
+                {/* NAME */}
 
                 <div className="md:col-span-2">
 
@@ -532,6 +683,13 @@ function StudentRegistration() {
                       form.name
                     }
 
+                    onFocus={(event) =>
+                      openTouchKeyboard(
+                        "name",
+                        event
+                      )
+                    }
+
                     onChange={
                       handleChange
                     }
@@ -543,6 +701,8 @@ function StudentRegistration() {
 
                 </div>
 
+
+                {/* COURSE */}
 
                 <div>
 
@@ -559,6 +719,13 @@ function StudentRegistration() {
                       form.course
                     }
 
+                    onFocus={(event) =>
+                      openTouchKeyboard(
+                        "course",
+                        event
+                      )
+                    }
+
                     onChange={
                       handleChange
                     }
@@ -570,6 +737,8 @@ function StudentRegistration() {
 
                 </div>
 
+
+                {/* YEAR LEVEL */}
 
                 <div>
 
@@ -586,6 +755,13 @@ function StudentRegistration() {
                       form.yearLevel
                     }
 
+                    onFocus={(event) =>
+                      openTouchKeyboard(
+                        "yearLevel",
+                        event
+                      )
+                    }
+
                     onChange={
                       handleChange
                     }
@@ -597,6 +773,8 @@ function StudentRegistration() {
 
                 </div>
 
+
+                {/* FLIGHT PROGRESS */}
 
                 <div className="md:col-span-2">
 
@@ -619,6 +797,13 @@ function StudentRegistration() {
 
                       value={
                         form.flightProgress
+                      }
+
+                      onFocus={(event) =>
+                        openTouchKeyboard(
+                          "flightProgress",
+                          event
+                        )
                       }
 
                       onChange={
@@ -655,6 +840,7 @@ function StudentRegistration() {
                   className="text-blue-600"
                 />
 
+
                 <h2 className="font-bold text-slate-900">
                   Login Information
                 </h2>
@@ -677,6 +863,13 @@ function StudentRegistration() {
 
                   value={
                     form.username
+                  }
+
+                  onFocus={(event) =>
+                    openTouchKeyboard(
+                      "username",
+                      event
+                    )
                   }
 
                   onChange={
@@ -732,6 +925,13 @@ function StudentRegistration() {
                         form.pin
                       }
 
+                      onFocus={(event) =>
+                        openTouchKeyboard(
+                          "pin",
+                          event
+                        )
+                      }
+
                       onChange={
                         handleChange
                       }
@@ -774,6 +974,8 @@ function StudentRegistration() {
                 </div>
 
 
+                {/* CONFIRM PIN */}
+
                 <div>
 
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -802,6 +1004,13 @@ function StudentRegistration() {
 
                       value={
                         form.confirmPin
+                      }
+
+                      onFocus={(event) =>
+                        openTouchKeyboard(
+                          "confirmPin",
+                          event
+                        )
                       }
 
                       onChange={
@@ -875,6 +1084,103 @@ function StudentRegistration() {
         </div>
 
       </div>
+
+
+      {/* ========================================================
+          TOUCHSCREEN KEYBOARD
+          ======================================================== */}
+
+      <TouchKeyboard
+        open={
+          Boolean(
+            activeKeyboardField
+          )
+        }
+
+        mode={
+          activeKeyboardField ===
+            "pin" ||
+          activeKeyboardField ===
+            "confirmPin"
+            ? "numeric"
+            : "text"
+        }
+
+        value={
+          activeKeyboardField
+            ? form[
+                activeKeyboardField
+              ] || ""
+            : ""
+        }
+
+        maxLength={
+          activeKeyboardField ===
+            "pin" ||
+          activeKeyboardField ===
+            "confirmPin"
+            ? 6
+            : undefined
+        }
+
+        masked={
+          (
+            activeKeyboardField ===
+              "pin" &&
+            !showPin
+          ) ||
+          (
+            activeKeyboardField ===
+              "confirmPin" &&
+            !showConfirmPin
+          )
+        }
+
+        title={
+          activeKeyboardField ===
+          "confirmPin"
+            ? "Confirm PIN"
+
+            : activeKeyboardField ===
+                "pin"
+              ? "6-Digit PIN"
+
+              : activeKeyboardField ===
+                  "flightProgress"
+                ? "Flight Progress"
+
+                : activeKeyboardField ===
+                    "yearLevel"
+                  ? "Year Level"
+
+                  : activeKeyboardField ===
+                      "course"
+                    ? "Course"
+
+                    : activeKeyboardField ===
+                        "username"
+                      ? "Username"
+
+                      : "Student Name"
+        }
+
+        onChange={(
+          value
+        ) => {
+          if (
+            activeKeyboardField
+          ) {
+            updateFieldValue(
+              activeKeyboardField,
+              value
+            );
+          }
+        }}
+
+        onDone={
+          closeTouchKeyboard
+        }
+      />
 
     </div>
   );

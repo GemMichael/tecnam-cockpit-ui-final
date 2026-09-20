@@ -1626,7 +1626,7 @@ function HistoryPage() {
           sortedSessions.length >
             0 && (
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto touch-pan-x">
 
               <table className="w-full min-w-[1100px]">
 

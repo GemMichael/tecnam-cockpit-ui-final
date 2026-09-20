@@ -20,22 +20,69 @@
   box-sizing: border-box;
 }
 
+/* =========================================================
+   GLOBAL PAGE / TOUCHSCREEN BEHAVIOR
+   ========================================================= */
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
 html {
   scroll-behavior: smooth;
+
+  /*
+   * Allow Chromium to determine whether the gesture
+   * should scroll vertically or horizontally.
+   */
+  touch-action: auto;
+
+  /* Prevent excessive vertical overscroll / bounce */
+  overscroll-behavior-y: contain;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+
+  /*
+   * Normal touchscreen page scrolling.
+   * Finger drag anywhere on regular page content
+   * can scroll the page vertically.
+   */
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  touch-action: auto;
+
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+
   background:
     radial-gradient(
       circle at top right,
       rgba(59, 130, 246, 0.16),
       transparent 35%
     ),
-    linear-gradient(135deg, #eef6ff 0%, #f8fbff 50%, #e8f3ff 100%);
+    linear-gradient(
+      135deg,
+      #eef6ff 0%,
+      #f8fbff 50%,
+      #e8f3ff 100%
+    );
 }
+
+#root {
+  min-height: 100vh;
+}
+
+/* =========================================================
+   FORM / INTERACTIVE CONTROLS
+   ========================================================= */
 
 button,
 input,
@@ -44,9 +91,95 @@ textarea {
   font: inherit;
 }
 
+/*
+ * Improve tapping behavior without changing appearance.
+ */
+button,
+input,
+select,
+textarea,
+a {
+  touch-action: manipulation;
+}
+
+/*
+ * Prevent unwanted text selection when repeatedly
+ * tapping touchscreen buttons.
+ */
+button {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* =========================================================
+   REUSABLE VERTICAL TOUCH-SCROLL CONTAINER
+   ========================================================= */
+
+/*
+ * Use:
+ *
+ * className="touch-scroll"
+ *
+ * for an internal area that specifically needs
+ * vertical touch scrolling.
+ */
+.touch-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  touch-action: pan-y;
+
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* =========================================================
+   REUSABLE HORIZONTAL TOUCH-SCROLL CONTAINER
+   ========================================================= */
+
+/*
+ * Use:
+ *
+ * className="touch-scroll-x"
+ *
+ * for tables, horizontal navigation, or other wide content.
+ */
+.touch-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  touch-action: pan-x;
+
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* =========================================================
+   TOUCH TARGET HELPER
+   ========================================================= */
+
+/*
+ * Optional helper.
+ *
+ * Only changes controls where you explicitly add:
+ *
+ * className="touch-target"
+ */
+.touch-target {
+  min-width: 48px;
+  min-height: 48px;
+
+  touch-action: manipulation;
+}
+
+/* =========================================================
+   EXISTING DESIGN
+   ========================================================= */
+
 /* Glass effect used throughout the application */
 .glass-card {
   background: rgba(255, 255, 255, 0.72);
+
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 
@@ -60,8 +193,15 @@ textarea {
 /* Aviation-style background grid */
 .aviation-grid {
   background-image:
-    linear-gradient(rgba(15, 103, 210, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 103, 210, 0.035) 1px, transparent 1px);
+    linear-gradient(
+      rgba(15, 103, 210, 0.035) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(15, 103, 210, 0.035) 1px,
+      transparent 1px
+    );
 
   background-size: 34px 34px;
 }
@@ -70,6 +210,10 @@ textarea {
 .blue-glow {
   box-shadow: 0 0 30px rgba(37, 99, 235, 0.16);
 }
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
 
 ::-webkit-scrollbar {
   width: 7px;

@@ -8,6 +8,8 @@ import {
   UserPlus,
 } from "lucide-react";
 
+import TouchKeyboard from "../components/TouchKeyboard";
+
 import {
   useEffect,
   useState,
@@ -62,6 +64,110 @@ function Login() {
     setError,
   ] = useState("");
 
+  const [
+    activeKeyboardField,
+    setActiveKeyboardField,
+  ] = useState(null);
+
+
+  function isTouchCapable() {
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return false;
+    }
+
+    return (
+      navigator.maxTouchPoints >
+      0 ||
+      window.matchMedia?.(
+        "(pointer: coarse)"
+      )?.matches
+    );
+  }
+
+
+  function openTouchKeyboard(
+    fieldName,
+    event
+  ) {
+    if (
+      !isTouchCapable()
+    ) {
+      return;
+    }
+
+    setActiveKeyboardField(
+      fieldName
+    );
+
+    window.setTimeout(
+      () => {
+        event.currentTarget
+          ?.scrollIntoView?.({
+            behavior:
+              "smooth",
+
+            block:
+              "center",
+          });
+      },
+      80
+    );
+  }
+
+
+  function closeTouchKeyboard() {
+    setActiveKeyboardField(
+      null
+    );
+
+    if (
+      document.activeElement instanceof
+      HTMLElement
+    ) {
+      document.activeElement.blur();
+    }
+  }
+
+
+  function handleTouchKeyboardChange(
+    value
+  ) {
+    if (
+      activeKeyboardField ===
+      "identifier"
+    ) {
+      setIdentifier(
+        value
+      );
+
+      setError("");
+
+      return;
+    }
+
+    if (
+      activeKeyboardField ===
+      "pin"
+    ) {
+      setPin(
+        value
+          .replace(
+            /\D/g,
+            ""
+          )
+          .slice(
+            0,
+            6
+          )
+      );
+
+      setError("");
+    }
+  }
+
 
   /* ==========================================================
      EXISTING LOGIN
@@ -106,7 +212,7 @@ function Login() {
           );
         }
       } catch (
-        loginError
+      loginError
       ) {
         console.warn(
           loginError
@@ -263,11 +369,11 @@ function Login() {
         }
       );
     } catch (
-      loginError
+    loginError
     ) {
       setError(
         loginError.message ||
-          "Login failed."
+        "Login failed."
       );
     } finally {
       setLoading(
@@ -302,7 +408,15 @@ function Login() {
 
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#eaf4ff]">
+    <div
+      className={[
+        "relative min-h-screen overflow-x-hidden bg-[#eaf4ff]",
+
+        activeKeyboardField
+          ? "pb-[340px]"
+          : "",
+      ].join(" ")}
+    >
 
       <div className="aviation-grid absolute inset-0" />
 
@@ -497,6 +611,13 @@ function Login() {
                         identifier
                       }
 
+                      onFocus={(event) =>
+                        openTouchKeyboard(
+                          "identifier",
+                          event
+                        )
+                      }
+
                       onChange={(
                         event
                       ) => {
@@ -545,8 +666,11 @@ function Login() {
 
                       inputMode="numeric"
 
-                      value={
-                        pin
+                      onFocus={(event) =>
+                        openTouchKeyboard(
+                          "pin",
+                          event
+                        )
                       }
 
                       onChange={
@@ -650,11 +774,60 @@ function Login() {
 
         </section>
 
-      </div>
+            </div>
+
+      <TouchKeyboard
+        open={
+          Boolean(
+            activeKeyboardField
+          )
+        }
+
+        mode={
+          activeKeyboardField ===
+          "pin"
+            ? "numeric"
+            : "text"
+        }
+
+        value={
+          activeKeyboardField ===
+          "pin"
+            ? pin
+            : identifier
+        }
+
+        maxLength={
+          activeKeyboardField ===
+          "pin"
+            ? 6
+            : undefined
+        }
+
+        masked={
+          activeKeyboardField ===
+            "pin" &&
+          !showPin
+        }
+
+        title={
+          activeKeyboardField ===
+          "pin"
+            ? "6-Digit PIN"
+            : "Username / Student ID"
+        }
+
+        onChange={
+          handleTouchKeyboardChange
+        }
+
+        onDone={
+          closeTouchKeyboard
+        }
+      />
 
     </div>
   );
 }
-
 
 export default Login;

@@ -229,7 +229,7 @@ const faqs = [
     ],
 
     {
-      link: "/checklists",
+      link: "/controls",
       linkLabel: "Open Choose Checklist",
       source: "System Guide",
     }
@@ -250,7 +250,7 @@ const faqs = [
     ],
 
     {
-      link: "/checklists",
+      link: "/controls",
       linkLabel: "Choose a Checklist",
       source: "System Guide",
     }
@@ -4707,7 +4707,7 @@ const faqs = [
     ],
 
     {
-      link: "/checklists",
+      link: "/controls",
       linkLabel: "Choose Checklist",
       source: "Troubleshooting Guide",
     }

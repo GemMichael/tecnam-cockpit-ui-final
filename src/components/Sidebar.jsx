@@ -29,11 +29,11 @@ export const navigationItems = [
     icon: SlidersHorizontal,
   },
 
-  {
-    label: "Choose Checklist",
-    path: "/checklists",
-    icon: ClipboardList,
-  },
+ // {
+    //label: "Choose Checklist",
+    //path: "/checklists",
+   // icon: ClipboardList,
+ // }, 
   {
     label: "Manual",
     path: "/manual",

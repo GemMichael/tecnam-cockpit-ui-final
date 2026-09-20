@@ -778,7 +778,7 @@ function Dashboard() {
 
         rightContent={
           <Link
-            to="/checklists"
+            to="/controls"
 
             className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
           >

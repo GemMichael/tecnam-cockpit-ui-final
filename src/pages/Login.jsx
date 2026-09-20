@@ -64,11 +64,16 @@ function Login() {
     setError,
   ] = useState("");
 
+
   const [
     activeKeyboardField,
     setActiveKeyboardField,
   ] = useState(null);
 
+
+  /* ==========================================================
+     TOUCHSCREEN
+     ========================================================== */
 
   function isTouchCapable() {
     if (
@@ -80,7 +85,7 @@ function Login() {
 
     return (
       navigator.maxTouchPoints >
-      0 ||
+        0 ||
       window.matchMedia?.(
         "(pointer: coarse)"
       )?.matches
@@ -98,13 +103,22 @@ function Login() {
       return;
     }
 
+    /*
+     * Save the target immediately.
+     *
+     * This is more reliable than accessing
+     * event.currentTarget later inside setTimeout.
+     */
+    const target =
+      event?.currentTarget;
+
     setActiveKeyboardField(
       fieldName
     );
 
     window.setTimeout(
       () => {
-        event.currentTarget
+        target
           ?.scrollIntoView?.({
             behavior:
               "smooth",
@@ -147,6 +161,7 @@ function Login() {
 
       return;
     }
+
 
     if (
       activeKeyboardField ===
@@ -198,7 +213,6 @@ function Login() {
             }
           );
 
-
           return;
         }
 
@@ -212,12 +226,11 @@ function Login() {
           );
         }
       } catch (
-      loginError
+        loginError
       ) {
         console.warn(
           loginError
         );
-
 
         localStorage.removeItem(
           "tecnamUser"
@@ -238,7 +251,6 @@ function Login() {
     event
   ) {
     event.preventDefault();
-
 
     setError("");
 
@@ -369,11 +381,11 @@ function Login() {
         }
       );
     } catch (
-    loginError
+      loginError
     ) {
       setError(
         loginError.message ||
-        "Login failed."
+          "Login failed."
       );
     } finally {
       setLoading(
@@ -423,7 +435,9 @@ function Login() {
 
       <div className="relative grid min-h-screen lg:grid-cols-[1.15fr_.85fr]">
 
-        {/* LEFT */}
+        {/* =====================================================
+            LEFT
+            ===================================================== */}
 
         <section
           className="relative hidden overflow-hidden bg-[#08233f] lg:flex"
@@ -512,7 +526,9 @@ function Login() {
         </section>
 
 
-        {/* RIGHT */}
+        {/* =====================================================
+            RIGHT
+            ===================================================== */}
 
         <section className="flex items-center justify-center p-6 md:p-12">
 
@@ -562,7 +578,9 @@ function Login() {
               </p>
 
 
-              {/* ERROR */}
+              {/* =================================================
+                  ERROR
+                  ================================================= */}
 
               {error && (
                 <div className="mt-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
@@ -589,7 +607,9 @@ function Login() {
                 className="mt-8 space-y-5"
               >
 
-                {/* USERNAME / STUDENT ID */}
+                {/* ===============================================
+                    USERNAME / STUDENT ID
+                    =============================================== */}
 
                 <div>
 
@@ -607,11 +627,26 @@ function Login() {
 
 
                     <input
+                      type="text"
+
                       value={
                         identifier
                       }
 
                       onFocus={(event) =>
+                        openTouchKeyboard(
+                          "identifier",
+                          event
+                        )
+                      }
+
+                      /*
+                       * Raspberry Pi Chromium fallback.
+                       *
+                       * Some touchscreen/browser combinations
+                       * can behave differently with focus events.
+                       */
+                      onClick={(event) =>
                         openTouchKeyboard(
                           "identifier",
                           event
@@ -640,7 +675,9 @@ function Login() {
                 </div>
 
 
-                {/* PIN */}
+                {/* ===============================================
+                    PIN
+                    =============================================== */}
 
                 <div>
 
@@ -666,7 +703,25 @@ function Login() {
 
                       inputMode="numeric"
 
+                      /*
+                       * Important:
+                       * Keep the PIN input controlled by React.
+                       */
+                      value={
+                        pin
+                      }
+
                       onFocus={(event) =>
+                        openTouchKeyboard(
+                          "pin",
+                          event
+                        )
+                      }
+
+                      /*
+                       * Raspberry Pi Chromium fallback.
+                       */
+                      onClick={(event) =>
                         openTouchKeyboard(
                           "pin",
                           event
@@ -714,6 +769,10 @@ function Login() {
 
                 </div>
 
+
+                {/* ===============================================
+                    LOGIN BUTTON
+                    =============================================== */}
 
                 <button
                   type="submit"
@@ -774,7 +833,12 @@ function Login() {
 
         </section>
 
-            </div>
+      </div>
+
+
+      {/* ========================================================
+          TOUCHSCREEN KEYBOARD
+          ======================================================== */}
 
       <TouchKeyboard
         open={

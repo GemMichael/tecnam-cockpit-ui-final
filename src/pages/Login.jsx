@@ -75,49 +75,31 @@ function Login() {
      TOUCHSCREEN
      ========================================================== */
 
-  function isTouchCapable() {
-    if (
-      typeof window ===
-      "undefined"
-    ) {
-      return false;
-    }
+  function openTouchKeyboard(
+    fieldName,
+    event
+  ) {
+    const target =
+      event?.currentTarget;
 
-    return (
-      navigator.maxTouchPoints >
-        0 ||
-      window.matchMedia?.(
-        "(pointer: coarse)"
-      )?.matches
+    setActiveKeyboardField(
+      fieldName
+    );
+
+    window.setTimeout(
+      () => {
+        target
+          ?.scrollIntoView?.({
+            behavior:
+              "smooth",
+
+            block:
+              "center",
+          });
+      },
+      80
     );
   }
-
-
-function openTouchKeyboard(
-  fieldName,
-  event
-) {
-  const target =
-    event?.currentTarget;
-
-  setActiveKeyboardField(
-    fieldName
-  );
-
-  window.setTimeout(
-    () => {
-      target
-        ?.scrollIntoView?.({
-          behavior:
-            "smooth",
-
-          block:
-            "center",
-        });
-    },
-    80
-  );
-}
 
   function closeTouchKeyboard() {
     setActiveKeyboardField(

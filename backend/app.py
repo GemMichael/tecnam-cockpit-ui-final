@@ -6,14 +6,19 @@ import re
 import secrets
 import sqlite3
 import uuid
+import shutil
+import subprocess
+import tempfile
 
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+
 
 
 # ============================================================
@@ -60,6 +65,8 @@ allowed_origins = [
     for origin in os.getenv(
         "TRAINING_ALLOWED_ORIGINS",
         (
+            "http://localhost,"
+            "http://127.0.0.1,"
             "http://localhost:5173,"
             "http://127.0.0.1:5173,"
             "http://localhost:4173,"
@@ -83,6 +90,197 @@ app.add_middleware(
 )
 
 
+class AtcSpeechRequest(BaseModel):
+
+    text: str = Field(
+        min_length=1,
+        max_length=1000,
+    )
+
+# ============================================================
+# ATC TEXT-TO-SPEECH
+# ============================================================
+
+ATC_TTS_VOICE = os.getenv(
+    "ATC_TTS_VOICE",
+    "en-us",
+)
+
+ATC_TTS_SPEED = int(
+    os.getenv(
+        "ATC_TTS_SPEED",
+        "175",
+    )
+)
+
+ATC_TTS_PITCH = int(
+    os.getenv(
+        "ATC_TTS_PITCH",
+        "38",
+    )
+)
+
+# ============================================================
+# ATC TEXT-TO-SPEECH
+# ============================================================
+
+@app.post(
+    "/api/tts/atc"
+)
+def generate_atc_voice(
+    payload: AtcSpeechRequest
+):
+
+    text = payload.text.strip()
+
+    if not text:
+        raise HTTPException(
+            status_code=400,
+            detail="ATC speech text is required.",
+        )
+
+
+    # ========================================================
+    # CHECK ESPEAK-NG
+    # ========================================================
+
+    espeak_path = shutil.which(
+        "espeak-ng"
+    )
+
+    if not espeak_path:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "espeak-ng is not installed "
+                "on this system."
+            ),
+        )
+
+
+    # ========================================================
+    # TEMPORARY WAV FILE
+    # ========================================================
+
+    temporary_file = (
+        tempfile.NamedTemporaryFile(
+            suffix=".wav",
+            delete=False,
+        )
+    )
+
+    wav_path = Path(
+        temporary_file.name
+    )
+
+    temporary_file.close()
+
+
+    try:
+
+        # ====================================================
+        # GENERATE SPEECH
+        # ====================================================
+
+        result = subprocess.run(
+            [
+                espeak_path,
+
+                "-v",
+                ATC_TTS_VOICE,
+
+                "-s",
+                str(
+                    ATC_TTS_SPEED
+                ),
+
+                "-p",
+                str(
+                    ATC_TTS_PITCH
+                ),
+
+                "-w",
+                str(
+                    wav_path
+                ),
+
+                text,
+            ],
+
+            capture_output=True,
+            text=True,
+
+            timeout=20,
+
+            check=False,
+        )
+
+
+        if result.returncode != 0:
+
+            raise HTTPException(
+                status_code=500,
+
+                detail=(
+                    result.stderr.strip()
+                    or
+                    "ATC speech generation failed."
+                ),
+            )
+
+
+        if (
+            not wav_path.exists()
+            or
+            wav_path.stat().st_size == 0
+        ):
+
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "ATC speech generated "
+                    "an empty audio file."
+                ),
+            )
+
+
+        wav_data = (
+            wav_path.read_bytes()
+        )
+
+
+        return Response(
+            content=wav_data,
+
+            media_type="audio/wav",
+
+            headers={
+                "Cache-Control":
+                    "no-store",
+            },
+        )
+
+
+    except subprocess.TimeoutExpired:
+
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                "ATC speech generation "
+                "timed out."
+            ),
+        )
+
+
+    finally:
+
+        try:
+            wav_path.unlink(
+                missing_ok=True
+            )
+
+        except OSError:
+            pass
 # ============================================================
 # HELPERS
 # ============================================================

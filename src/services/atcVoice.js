@@ -2,58 +2,82 @@
    ATC VOICE SERVICE
    TECNAM P2002JF COCKPIT TRAINER
 
-   CURRENT DEVELOPMENT VERSION:
-   Browser Speech Synthesis + radio effects
+   Raspberry Pi version:
 
-   FINAL RASPBERRY PI VERSION:
-   Offline TTS + proper radio audio processing
-
-   The rest of the comms system does not need to change.
+   React
+      ↓
+   FastAPI
+      ↓
+   espeak-ng
+      ↓
+   WAV audio
+      ↓
+   Web Audio radio processing
+      ↓
+   Headset
    ============================================================ */
 
 
 /* ============================================================
-   SPEECH ENGINE
+   API
    ============================================================ */
 
-function getSpeechEngine() {
-  if (typeof window === "undefined") {
-    return null;
+function getApiBaseUrl() {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return "http://127.0.0.1:8000";
   }
 
-  if (!("speechSynthesis" in window)) {
-    return null;
-  }
+  const hostname =
+    window.location.hostname ||
+    "127.0.0.1";
 
-  return window.speechSynthesis;
+  return `http://${hostname}:8000`;
 }
 
 
 /* ============================================================
    AUDIO CONTEXT
-
-   Used only for the radio click / squelch sound.
    ============================================================ */
 
 let audioContext = null;
 
+let activeSpeechSource =
+  null;
+
+let activeRequestController =
+  null;
+
+let speechGeneration =
+  0;
+
+
 function getAudioContext() {
-  if (typeof window === "undefined") {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
     return null;
   }
+
 
   const AudioContextClass =
     window.AudioContext ||
     window.webkitAudioContext;
 
+
   if (!AudioContextClass) {
     return null;
   }
+
 
   if (!audioContext) {
     audioContext =
       new AudioContextClass();
   }
+
 
   return audioContext;
 }
@@ -61,18 +85,17 @@ function getAudioContext() {
 
 /* ============================================================
    RESUME AUDIO CONTEXT
-
-   Chrome sometimes suspends Web Audio until the user
-   interacts with the page.
    ============================================================ */
 
 async function resumeAudioContext() {
   const context =
     getAudioContext();
 
+
   if (!context) {
     return;
   }
+
 
   if (
     context.state ===
@@ -91,16 +114,7 @@ async function resumeAudioContext() {
 
 
 /* ============================================================
-   RADIO SQUELCH / CLICK
-
-   Creates a very short burst of filtered noise.
-
-   This gives the effect of:
-   radio opens
-       ↓
-   ATC speaks
-       ↓
-   radio closes
+   RADIO SQUELCH
    ============================================================ */
 
 async function playRadioSquelch(
@@ -110,19 +124,25 @@ async function playRadioSquelch(
   const context =
     getAudioContext();
 
+
   if (!context) {
     return;
   }
 
+
   await resumeAudioContext();
+
 
   const sampleRate =
     context.sampleRate;
 
+
   const frameCount =
     Math.floor(
-      sampleRate * duration
+      sampleRate *
+      duration
     );
+
 
   const buffer =
     context.createBuffer(
@@ -131,28 +151,34 @@ async function playRadioSquelch(
       sampleRate
     );
 
+
   const data =
-    buffer.getChannelData(0);
+    buffer.getChannelData(
+      0
+    );
 
-  /*
-    Generate noise.
-
-    The strength fades out quickly.
-  */
 
   for (
-    let i = 0;
-    i < frameCount;
-    i += 1
+    let index = 0;
+    index < frameCount;
+    index += 1
   ) {
     const progress =
-      i / frameCount;
+      index /
+      frameCount;
+
 
     const envelope =
-      1 - progress;
+      1 -
+      progress;
 
-    data[i] =
-      (Math.random() * 2 - 1) *
+
+    data[index] =
+      (
+        Math.random() *
+        2 -
+        1
+      ) *
       envelope;
   }
 
@@ -160,23 +186,22 @@ async function playRadioSquelch(
   const source =
     context.createBufferSource();
 
+
   source.buffer =
     buffer;
 
 
-  /*
-    Band-pass filter gives the click a radio-like
-    frequency range.
-  */
-
   const filter =
     context.createBiquadFilter();
+
 
   filter.type =
     "bandpass";
 
+
   filter.frequency.value =
     1800;
+
 
   filter.Q.value =
     0.8;
@@ -184,6 +209,7 @@ async function playRadioSquelch(
 
   const gain =
     context.createGain();
+
 
   gain.gain.value =
     volume;
@@ -193,9 +219,11 @@ async function playRadioSquelch(
     filter
   );
 
+
   filter.connect(
     gain
   );
+
 
   gain.connect(
     context.destination
@@ -207,145 +235,11 @@ async function playRadioSquelch(
 
 
 /* ============================================================
-   CHOOSE ATC VOICE
-
-   Voice availability depends on the operating system.
-
-   On Windows, Chrome may expose voices such as:
-
-   Microsoft Guy
-   Microsoft Mark
-   Microsoft David
-   Microsoft George
-   Microsoft Ryan
-   Microsoft Daniel
-
-   We prefer deeper English voices when possible.
-   ============================================================ */
-
-function chooseAtcVoice() {
-  const engine =
-    getSpeechEngine();
-
-  if (!engine) {
-    return null;
-  }
-
-  const voices =
-    engine.getVoices();
-
-  if (!voices.length) {
-    return null;
-  }
-
-
-  /* ==========================================================
-     ENGLISH ONLY
-     ========================================================== */
-
-  const englishVoices =
-    voices.filter(
-      (voice) =>
-        voice.lang
-          ?.toLowerCase()
-          .startsWith("en")
-    );
-
-
-  const candidates =
-    englishVoices.length
-      ? englishVoices
-      : voices;
-
-
-  /* ==========================================================
-     PREFERRED VOICE NAMES
-
-     We check keywords instead of requiring exact names
-     because Windows may call them things like:
-
-     Microsoft Guy Online (Natural)
-     Microsoft David Desktop
-     etc.
-     ========================================================== */
-
-  const preferredKeywords = [
-    "guy",
-    "mark",
-    "david",
-    "george",
-    "ryan",
-    "daniel",
-    "james",
-    "male",
-    "google uk english male",
-  ];
-
-
-  for (
-    const keyword
-    of preferredKeywords
-  ) {
-    const found =
-      candidates.find(
-        (voice) =>
-          voice.name
-            .toLowerCase()
-            .includes(keyword)
-      );
-
-    if (found) {
-      return found;
-    }
-  }
-
-
-  /*
-    Prefer US English next.
-  */
-
-  const usEnglish =
-    candidates.find(
-      (voice) =>
-        voice.lang
-          ?.toLowerCase() ===
-        "en-us"
-    );
-
-  if (usEnglish) {
-    return usEnglish;
-  }
-
-
-  /*
-    Then UK English.
-  */
-
-  const ukEnglish =
-    candidates.find(
-      (voice) =>
-        voice.lang
-          ?.toLowerCase() ===
-        "en-gb"
-    );
-
-  if (ukEnglish) {
-    return ukEnglish;
-  }
-
-
-  return candidates[0];
-}
-
-
-/* ============================================================
    AVIATION PRONUNCIATION
 
-   IMPORTANT:
+   Only changes what is spoken.
 
-   This changes ONLY what the TTS engine says.
-
-   It does NOT change the visible ATC text.
+   The visible ATC text is NOT modified.
    ============================================================ */
 
 function prepareAtcSpeechText(
@@ -355,6 +249,7 @@ function prepareAtcSpeechText(
     return "";
   }
 
+
   let prepared =
     text;
 
@@ -362,80 +257,78 @@ function prepareAtcSpeechText(
   /* ==========================================================
      CALLSIGN
 
-     Screen:
      RP-C1234
-
-     Voice:
+        ↓
      Romeo Papa Charlie one two three four
-
-     If your instructor prefers "R P C..."
-     we can change this later.
      ========================================================== */
 
   prepared =
     prepared.replace(
       /RP[\s-]?C[\s-]?1234/gi,
-      "Romeo Papa Charlie one two three four"
+
+      (
+        "Romeo Papa Charlie " +
+        "one two three four"
+      )
     );
 
 
   /* ==========================================================
-     RUNWAY
+     RUNWAY 17
      ========================================================== */
 
   prepared =
     prepared.replace(
       /runway\s+17/gi,
+
       "runway one seven"
     );
 
 
   /* ==========================================================
-     HOLDING POINT
+     HOLDING POINT 17
      ========================================================== */
 
   prepared =
     prepared.replace(
       /holding\s+point\s+17/gi,
+
       "holding point one seven"
     );
 
 
   /* ==========================================================
-     ALTIMETER
-
-     29.95 → two niner niner five
+     ALTIMETER 29.95
      ========================================================== */
 
   prepared =
     prepared.replace(
       /29\.95/g,
+
       "two niner niner five"
     );
 
 
   /* ==========================================================
      STARTUP
-
-     Give the synthesizer slightly better phrasing.
      ========================================================== */
 
   prepared =
     prepared.replace(
       /startup approved/gi,
+
       "start up approved"
     );
 
 
   /* ==========================================================
-     ADD SMALL PAUSES WITH COMMAS
-
-     Browser TTS usually pauses slightly at commas.
+     NORMALIZE COMMAS
      ========================================================== */
 
   prepared =
     prepared.replace(
       /,\s*/g,
+
       ", "
     );
 
@@ -445,41 +338,26 @@ function prepareAtcSpeechText(
 
 
 /* ============================================================
-   SHOW AVAILABLE VOICES
+   AVAILABLE VOICES
 
-   Useful for debugging.
+   Browser speechSynthesis is no longer used.
 
-   In Chrome Console you can later run this if exported.
+   Keep this export so existing UI code does not break.
    ============================================================ */
 
 export function getAvailableAtcVoices() {
-  const engine =
-    getSpeechEngine();
+  return [
+    {
+      name:
+        "Raspberry Pi ATC Voice",
 
-  if (!engine) {
-    return [];
-  }
+      lang:
+        "en-US",
 
-  return engine
-    .getVoices()
-    .filter(
-      (voice) =>
-        voice.lang
-          ?.toLowerCase()
-          .startsWith("en")
-    )
-    .map(
-      (voice) => ({
-        name:
-          voice.name,
-
-        lang:
-          voice.lang,
-
-        default:
-          voice.default,
-      })
-    );
+      default:
+        true,
+    },
+  ];
 }
 
 
@@ -488,14 +366,319 @@ export function getAvailableAtcVoices() {
    ============================================================ */
 
 export function stopAtcSpeech() {
-  const engine =
-    getSpeechEngine();
+  speechGeneration += 1;
 
-  if (!engine) {
-    return;
+
+  if (
+    activeRequestController
+  ) {
+    try {
+      activeRequestController.abort();
+    } catch {
+      // Ignore.
+    }
+
+
+    activeRequestController =
+      null;
   }
 
-  engine.cancel();
+
+  if (
+    activeSpeechSource
+  ) {
+    try {
+      /*
+       * Remove onended before stopping
+       * so intentional cancellation does
+       * not trigger the normal closing flow.
+       */
+
+      activeSpeechSource.onended =
+        null;
+
+
+      activeSpeechSource.stop();
+    } catch {
+      // Ignore.
+    }
+
+
+    activeSpeechSource =
+      null;
+  }
+}
+
+
+/* ============================================================
+   GET TTS AUDIO
+   ============================================================ */
+
+async function requestAtcAudio(
+  speechText,
+  signal
+) {
+  const apiBaseUrl =
+    getApiBaseUrl();
+
+
+  const response =
+    await fetch(
+      `${apiBaseUrl}/api/tts/atc`,
+
+      {
+        method:
+          "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body:
+          JSON.stringify({
+            text:
+              speechText,
+          }),
+
+        signal,
+      }
+    );
+
+
+  if (!response.ok) {
+    let message =
+      `ATC voice failed (${response.status}).`;
+
+
+    try {
+      const data =
+        await response.json();
+
+
+      if (data?.detail) {
+        message =
+          data.detail;
+      }
+    } catch {
+      const text =
+        await response.text();
+
+
+      if (text) {
+        message =
+          text;
+      }
+    }
+
+
+    throw new Error(
+      message
+    );
+  }
+
+
+  return response.arrayBuffer();
+}
+
+
+/* ============================================================
+   PLAY ATC AUDIO
+
+   Radio processing:
+
+   high-pass:
+   removes deep bass
+
+   low-pass:
+   removes excessive high frequencies
+
+   compressor:
+   gives a more radio-like controlled level
+   ============================================================ */
+
+async function playAtcAudio(
+  wavArrayBuffer,
+  {
+    onStart,
+    onEnd,
+  } = {}
+) {
+  const context =
+    getAudioContext();
+
+
+  if (!context) {
+    throw new Error(
+      "Web Audio is unavailable."
+    );
+  }
+
+
+  await resumeAudioContext();
+
+
+  const audioBuffer =
+    await context.decodeAudioData(
+      wavArrayBuffer.slice(0)
+    );
+
+
+  const source =
+    context.createBufferSource();
+
+
+  source.buffer =
+    audioBuffer;
+
+
+  /* ==========================================================
+     RADIO HIGH-PASS
+     ========================================================== */
+
+  const highPass =
+    context.createBiquadFilter();
+
+
+  highPass.type =
+    "highpass";
+
+
+  highPass.frequency.value =
+    300;
+
+
+  highPass.Q.value =
+    0.7;
+
+
+  /* ==========================================================
+     RADIO LOW-PASS
+     ========================================================== */
+
+  const lowPass =
+    context.createBiquadFilter();
+
+
+  lowPass.type =
+    "lowpass";
+
+
+  lowPass.frequency.value =
+    3400;
+
+
+  lowPass.Q.value =
+    0.7;
+
+
+  /* ==========================================================
+     COMPRESSION
+     ========================================================== */
+
+  const compressor =
+    context.createDynamicsCompressor();
+
+
+  compressor.threshold.value =
+    -24;
+
+
+  compressor.knee.value =
+    14;
+
+
+  compressor.ratio.value =
+    4;
+
+
+  compressor.attack.value =
+    0.004;
+
+
+  compressor.release.value =
+    0.16;
+
+
+  /* ==========================================================
+     FINAL GAIN
+     ========================================================== */
+
+  const gain =
+    context.createGain();
+
+
+  gain.gain.value =
+    0.95;
+
+
+  source.connect(
+    highPass
+  );
+
+
+  highPass.connect(
+    lowPass
+  );
+
+
+  lowPass.connect(
+    compressor
+  );
+
+
+  compressor.connect(
+    gain
+  );
+
+
+  gain.connect(
+    context.destination
+  );
+
+
+  activeSpeechSource =
+    source;
+
+
+  return new Promise(
+    (resolve) => {
+
+      source.onended =
+        async () => {
+
+          if (
+            activeSpeechSource ===
+            source
+          ) {
+            activeSpeechSource =
+              null;
+          }
+
+
+          await playRadioSquelch(
+            0.065,
+            0.04
+          );
+
+
+          if (onEnd) {
+            onEnd();
+          }
+
+
+          resolve();
+        };
+
+
+      if (onStart) {
+        onStart();
+      }
+
+
+      source.start();
+    }
+  );
 }
 
 
@@ -511,192 +694,135 @@ export async function speakAtc(
     onError,
   } = {}
 ) {
-  const engine =
-    getSpeechEngine();
-
-
-  if (!engine) {
-    console.warn(
-      "Browser text-to-speech is not supported."
-    );
-
-    if (onError) {
-      onError(
-        new Error(
-          "Speech synthesis unavailable."
-        )
-      );
-    }
-
-    return false;
-  }
-
-
   if (!text) {
     return false;
   }
 
 
   /* ==========================================================
-     STOP PREVIOUS TRANSMISSION
+     STOP OLD TRANSMISSION
      ========================================================== */
 
-  engine.cancel();
+  stopAtcSpeech();
 
 
-  /* ==========================================================
-     RADIO OPENING SQUELCH
-     ========================================================== */
-
-  await playRadioSquelch(
-    0.08,
-    0.055
-  );
+  const currentGeneration =
+    ++speechGeneration;
 
 
-  /*
-    Tiny delay between squelch and voice.
-  */
-
-  await new Promise(
-    (resolve) =>
-      setTimeout(
-        resolve,
-        100
-      )
-  );
+  const controller =
+    new AbortController();
 
 
-  /* ==========================================================
-     PREPARE SPEECH
-     ========================================================== */
+  activeRequestController =
+    controller;
 
-  const speechText =
-    prepareAtcSpeechText(
-      text
+
+  try {
+
+    /* ========================================================
+       WAKE AUDIO
+       ======================================================== */
+
+    await resumeAudioContext();
+
+
+    /* ========================================================
+       OPEN RADIO
+       ======================================================== */
+
+    await playRadioSquelch(
+      0.08,
+      0.055
     );
 
 
-  const utterance =
-    new window.SpeechSynthesisUtterance(
-      speechText
+    await new Promise(
+      (resolve) =>
+        setTimeout(
+          resolve,
+          100
+        )
     );
 
 
-  /* ==========================================================
-     SELECT VOICE
-     ========================================================== */
+    /* ========================================================
+       PREPARE AVIATION SPEECH
+       ======================================================== */
 
-  const voice =
-    chooseAtcVoice();
+    const speechText =
+      prepareAtcSpeechText(
+        text
+      );
 
 
-  if (voice) {
-    utterance.voice =
-      voice;
+    /* ========================================================
+       REQUEST WAV FROM FASTAPI
+       ======================================================== */
 
-    utterance.lang =
-      voice.lang;
-  } else {
-    utterance.lang =
-      "en-US";
+    const wavArrayBuffer =
+      await requestAtcAudio(
+        speechText,
+        controller.signal
+      );
+
+
+    if (
+      currentGeneration !==
+      speechGeneration
+    ) {
+      return false;
+    }
+
+
+    /* ========================================================
+       PLAY
+       ======================================================== */
+
+    await playAtcAudio(
+      wavArrayBuffer,
+      {
+        onStart,
+        onEnd,
+      }
+    );
+
+
+    return true;
+
+  } catch (error) {
+
+    if (
+      error?.name ===
+      "AbortError"
+    ) {
+      return false;
+    }
+
+
+    console.error(
+      "ATC speech error:",
+      error
+    );
+
+
+    if (onError) {
+      onError(
+        error
+      );
+    }
+
+
+    return false;
+
+  } finally {
+
+    if (
+      activeRequestController ===
+      controller
+    ) {
+      activeRequestController =
+        null;
+    }
   }
-
-
-  /* ==========================================================
-     ATC-LIKE VOICE SETTINGS
-
-     rate:
-     Controllers normally speak clearly but not slowly.
-
-     pitch:
-     Lower for a firmer radio voice.
-
-     volume:
-     Full volume.
-     ========================================================== */
-
-  utterance.rate =
-    0.98;
-
-  utterance.pitch =
-    0.72;
-
-  utterance.volume =
-    1;
-
-
-  /* ==========================================================
-     EVENTS
-     ========================================================== */
-
-  utterance.onstart =
-    () => {
-      if (onStart) {
-        onStart();
-      }
-    };
-
-
-  utterance.onend =
-    async () => {
-
-      /*
-        Radio closing squelch.
-      */
-
-      await playRadioSquelch(
-        0.065,
-        0.04
-      );
-
-
-      if (onEnd) {
-        onEnd();
-      }
-    };
-
-
-  utterance.onerror =
-    (event) => {
-
-      /*
-        Chrome may report "interrupted" if we intentionally
-        cancel a previous transmission.
-
-        Don't display that as a real simulator error.
-      */
-
-      if (
-        event.error ===
-          "interrupted" ||
-        event.error ===
-          "canceled"
-      ) {
-        return;
-      }
-
-
-      console.error(
-        "ATC speech error:",
-        event
-      );
-
-
-      if (onError) {
-        onError(event);
-      }
-    };
-
-
-  /* ==========================================================
-     TRANSMIT
-     ========================================================== */
-
-  engine.speak(
-    utterance
-  );
-
-
-  return true;
 }

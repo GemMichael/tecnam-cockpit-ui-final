@@ -89,44 +89,16 @@ function StudentRegistration() {
   ] = useState(null);
 
 
-  function isTouchCapable() {
-    if (
-      typeof window ===
-      "undefined"
-    ) {
-      return false;
-    }
-
-
-    return (
-      navigator.maxTouchPoints >
-        0 ||
-      window.matchMedia?.(
-        "(pointer: coarse)"
-      )?.matches
-    );
-  }
-
-
   function openTouchKeyboard(
     fieldName,
     event
   ) {
-    if (
-      !isTouchCapable()
-    ) {
-      return;
-    }
-
+    const target =
+      event?.currentTarget;
 
     setActiveKeyboardField(
       fieldName
     );
-
-
-    const target =
-      event.currentTarget;
-
 
     window.setTimeout(
       () => {
@@ -142,7 +114,6 @@ function StudentRegistration() {
       80
     );
   }
-
 
   function closeTouchKeyboard() {
     setActiveKeyboardField(
@@ -690,6 +661,13 @@ function StudentRegistration() {
                       )
                     }
 
+                    onClick={(event) =>
+                      openTouchKeyboard(
+                        "name",
+                        event
+                      )
+                    }
+
                     onChange={
                       handleChange
                     }
@@ -726,6 +704,13 @@ function StudentRegistration() {
                       )
                     }
 
+                    onClick={(event) =>
+                      openTouchKeyboard(
+                        "course",
+                        event
+                      )
+                    }
+
                     onChange={
                       handleChange
                     }
@@ -756,6 +741,13 @@ function StudentRegistration() {
                     }
 
                     onFocus={(event) =>
+                      openTouchKeyboard(
+                        "yearLevel",
+                        event
+                      )
+                    }
+
+                    onClick={(event) =>
                       openTouchKeyboard(
                         "yearLevel",
                         event
@@ -800,6 +792,13 @@ function StudentRegistration() {
                       }
 
                       onFocus={(event) =>
+                        openTouchKeyboard(
+                          "flightProgress",
+                          event
+                        )
+                      }
+
+                      onClick={(event) =>
                         openTouchKeyboard(
                           "flightProgress",
                           event
@@ -872,6 +871,13 @@ function StudentRegistration() {
                     )
                   }
 
+                  onClick={(event) =>
+                    openTouchKeyboard(
+                      "username",
+                      event
+                    )
+                  }
+
                   onChange={
                     handleChange
                   }
@@ -926,6 +932,13 @@ function StudentRegistration() {
                       }
 
                       onFocus={(event) =>
+                        openTouchKeyboard(
+                          "pin",
+                          event
+                        )
+                      }
+
+                      onClick={(event) =>
                         openTouchKeyboard(
                           "pin",
                           event
@@ -1007,6 +1020,13 @@ function StudentRegistration() {
                       }
 
                       onFocus={(event) =>
+                        openTouchKeyboard(
+                          "confirmPin",
+                          event
+                        )
+                      }
+
+                      onClick={(event) =>
                         openTouchKeyboard(
                           "confirmPin",
                           event

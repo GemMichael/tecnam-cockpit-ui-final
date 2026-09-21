@@ -93,44 +93,31 @@ function Login() {
   }
 
 
-  function openTouchKeyboard(
-    fieldName,
-    event
-  ) {
-    if (
-      !isTouchCapable()
-    ) {
-      return;
-    }
+function openTouchKeyboard(
+  fieldName,
+  event
+) {
+  const target =
+    event?.currentTarget;
 
-    /*
-     * Save the target immediately.
-     *
-     * This is more reliable than accessing
-     * event.currentTarget later inside setTimeout.
-     */
-    const target =
-      event?.currentTarget;
+  setActiveKeyboardField(
+    fieldName
+  );
 
-    setActiveKeyboardField(
-      fieldName
-    );
+  window.setTimeout(
+    () => {
+      target
+        ?.scrollIntoView?.({
+          behavior:
+            "smooth",
 
-    window.setTimeout(
-      () => {
-        target
-          ?.scrollIntoView?.({
-            behavior:
-              "smooth",
-
-            block:
-              "center",
-          });
-      },
-      80
-    );
-  }
-
+          block:
+            "center",
+        });
+    },
+    80
+  );
+}
 
   function closeTouchKeyboard() {
     setActiveKeyboardField(

@@ -406,7 +406,7 @@ export const checklists = [
           "Electric Fuel Pump",
 
         instruction:
-          "Check fuel quantity: 50 liters on the right wing and 50 liters on the left wing. The endurance is 4 hours.",
+          "Turn the electric fuel pump OFF.",
 
         controlId:
           "fuel_pump",
@@ -490,9 +490,8 @@ export const checklists = [
 
         title:
           "Fuel Quantity",
-
         instruction:
-          "Check fuel quantity: 50 liters on the right wing and 50 liters on the left wing.",
+          "Check fuel quantity: 50 liters on the right wing and 50 liters on the left wing. The endurance is 4 hours.",
 
         actionLabel:
           "Confirm Fuel Tank Check",
@@ -609,7 +608,7 @@ export const checklists = [
         id: "ci-19",
 
         title:
-          "Engine Startup Communication",
+          "Start Clearance",
 
         instruction:
           "Complete the Binalonan Radio engine startup communication procedure.",
@@ -1781,8 +1780,7 @@ export const checklists = [
           "Ignition Switch Check",
 
         instruction:
-          "check the left magnetos, read rpm drop, then return to both. Check the right magneto, read rpm drop then return to both. Read the total rpm of both and the difference.",
-
+          "Check the right magneto, read the RPM drop, then return to BOTH. Check the left magneto, read the RPM drop, then return to BOTH. Read the total RPM drop and the difference.",
         controlId:
           "ignition",
 
@@ -2372,18 +2370,18 @@ export const checklists = [
   },
 
   // ===========================================================
-  // 7. ENGINE SHUTDOWN
+  // 7. ENGINE SECURING
   // ===========================================================
   {
     id: "engine-shutdown",
 
     title:
-      "Engine Shutdown",
+      "Engine Securing",
 
     phase: "Shutdown",
 
     description:
-      "Engine shutdown procedure.",
+      "Engine securing procedure.",
 
     duration: "5–8 min",
 

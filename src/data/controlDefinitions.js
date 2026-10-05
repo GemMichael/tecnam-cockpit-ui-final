@@ -1,7 +1,4 @@
-const option = (
-  value,
-  label = value
-) => ({
+const option = (value, label = value) => ({
   value,
   label,
 });
@@ -13,8 +10,7 @@ export const controlSections = [
   {
     id: "electrical",
     title: "Electrical",
-    description:
-      "Primary aircraft electrical controls.",
+    description: "Primary aircraft electrical controls.",
 
     controls: [
       {
@@ -77,8 +73,7 @@ export const controlSections = [
     controls: [
       {
         id: "fuel_pump",
-        label:
-          "Electric Fuel Pump",
+        label: "Electric Fuel Pump",
         defaultValue: "OFF",
 
         options: [
@@ -107,7 +102,7 @@ export const controlSections = [
         options: [
           option("IDLE"),
 
-          // Exact 1000 RPM used
+          // Exact 1000 RPM is required
           // by the Run-Up checklist.
           option(
             "1000",
@@ -115,7 +110,7 @@ export const controlSections = [
           ),
 
           // Used during engine starting
-          // and engine securing.
+          // and shutdown.
           option(
             "1000_1200",
             "1000–1200 RPM"
@@ -160,8 +155,7 @@ export const controlSections = [
 
       {
         id: "carb_heat",
-        label:
-          "Carburetor Heat",
+        label: "Carburetor Heat",
         defaultValue: "OFF",
 
         options: [
@@ -172,10 +166,8 @@ export const controlSections = [
 
       {
         id: "chronometer",
-        label:
-          "Chronometer / Clock",
-        defaultValue:
-          "STOPPED",
+        label: "Chronometer / Clock",
+        defaultValue: "STOPPED",
 
         options: [
           option(
@@ -204,8 +196,7 @@ export const controlSections = [
     controls: [
       {
         id: "nav_light",
-        label:
-          "Navigation Light",
+        label: "Navigation Light",
         defaultValue: "OFF",
 
         options: [
@@ -228,26 +219,12 @@ export const controlSections = [
       {
         id: "landing_light",
         label: "Landing Light",
-
-        // Physical 3-position selector:
-        // OFF / STANDBY / ON
-        defaultValue: "OFF",
+        defaultValue: "STBY",
 
         options: [
-          option(
-            "OFF",
-            "OFF"
-          ),
-
-          option(
-            "STBY",
-            "STANDBY"
-          ),
-
-          option(
-            "ON",
-            "ON"
-          ),
+          option("OFF"),
+          option("STBY"),
+          option("ON"),
         ],
       },
     ],
@@ -289,26 +266,12 @@ export const controlSections = [
       {
         id: "transponder",
         label: "Transponder",
-
-        // Physical 3-position selector:
-        // OFF / STANDBY / ALT
         defaultValue: "OFF",
 
         options: [
-          option(
-            "OFF",
-            "OFF"
-          ),
-
-          option(
-            "STBY",
-            "STANDBY"
-          ),
-
-          option(
-            "ALT",
-            "ALT"
-          ),
+          option("OFF"),
+          option("STBY"),
+          option("ALT"),
         ],
       },
 
@@ -330,63 +293,43 @@ export const controlSections = [
   // =========================================================
   {
     id: "flight-cabin",
-    title:
-      "Flight & Cabin",
+    title: "Flight & Cabin",
     description:
       "Flight configuration and cabin controls.",
 
     controls: [
       {
         id: "parking_brake",
-        label:
-          "Parking Brake",
-        defaultValue:
-          "RELEASED",
+        label: "Parking Brake",
+        defaultValue: "RELEASED",
 
         options: [
-          option(
-            "RELEASED",
-            "RELEASED"
-          ),
-
-          option(
-            "ENGAGED",
-            "ENGAGED"
-          ),
+          option("RELEASED"),
+          option("ENGAGED"),
         ],
       },
 
       {
         id: "flaps",
         label: "Flaps",
-
-        // Physical 3-position selector:
-        // UP / T/O / FULL
         defaultValue: "UP",
 
         options: [
-          option(
-            "UP",
-            "UP"
-          ),
+          option("UP"),
 
           option(
             "TAKEOFF",
             "T/O"
           ),
 
-          option(
-            "FULL",
-            "FULL"
-          ),
+          option("FULL"),
         ],
       },
 
       {
         id: "trim",
         label: "Trim",
-        defaultValue:
-          "NEUTRAL",
+        defaultValue: "NEUTRAL",
 
         options: [
           option("LEFT"),
@@ -398,19 +341,11 @@ export const controlSections = [
       {
         id: "seat",
         label: "Seat",
-        defaultValue:
-          "UNADJUSTED",
+        defaultValue: "UNADJUSTED",
 
         options: [
-          option(
-            "UNADJUSTED",
-            "UNADJUSTED"
-          ),
-
-          option(
-            "ADJUSTED",
-            "ADJUSTED"
-          ),
+          option("UNADJUSTED"),
+          option("ADJUSTED"),
         ],
       },
 
@@ -422,15 +357,8 @@ export const controlSections = [
           "UNFASTENED",
 
         options: [
-          option(
-            "UNFASTENED",
-            "UNFASTENED"
-          ),
-
-          option(
-            "FASTENED",
-            "FASTENED"
-          ),
+          option("UNFASTENED"),
+          option("FASTENED"),
         ],
       },
 
@@ -449,33 +377,23 @@ export const controlSections = [
         id: "friction_lock",
         label:
           "Throttle Friction",
-
-        // Physical 3-position selector:
-        // RELEASE / ADJUST / SET
         defaultValue:
-          "RELEASE",
+          "RELEASED",
 
         options: [
-          option(
-            "RELEASE",
-            "RELEASE"
-          ),
+          option("RELEASED"),
 
           option(
-            "ADJUST",
+            "ADJUSTED",
             "ADJUST"
           ),
 
-          option(
-            "SET",
-            "SET"
-          ),
+          option("SET"),
         ],
       },
     ],
   },
 ];
-
 
 // =============================================================
 // FLATTEN ALL CONTROLS
@@ -486,7 +404,6 @@ export const allControls =
     (section) =>
       section.controls
   );
-
 
 // =============================================================
 // INITIAL CONTROL STATES
@@ -502,7 +419,6 @@ export const initialControls =
     )
   );
 
-
 // =============================================================
 // FIND A CONTROL
 // =============================================================
@@ -515,7 +431,6 @@ export function getControlDefinition(
       control.id === controlId
   );
 }
-
 
 // =============================================================
 // GET DISPLAY LABEL
@@ -534,14 +449,13 @@ export function getOptionLabel(
     return value;
   }
 
-  const foundOption =
+  const option =
     control.options.find(
       (item) =>
         item.value === value
     );
 
   return (
-    foundOption?.label ||
-    value
+    option?.label || value
   );
 }

@@ -256,10 +256,10 @@ export const checklists = [
           "friction_lock",
 
         expected:
-          "ADJUST",
+          "ADJUSTED",
 
         expectedLabel:
-          "Throttle Friction Adjust",
+          "Throttle Friction Adjusted",
       }),
 
       // -------------------------------------------------------
@@ -282,26 +282,6 @@ export const checklists = [
 
         expectedLabel:
           "Circuit Breakers All In",
-      }),
-
-      // -------------------------------------------------------
-      // PRELIMINARY CREW BRIEFING
-      // -------------------------------------------------------
-
-      manualStep({
-        id: "ci-5a",
-
-        title:
-          "Preliminary Crew Briefing",
-
-        instruction:
-          "Recite the Preliminary Crew Briefing.",
-
-        actionLabel:
-          "Confirm Briefing Obtained",
-
-        note:
-          "Added in the revised checklist.",
       }),
 
       // -------------------------------------------------------
@@ -349,54 +329,6 @@ export const checklists = [
       }),
 
       // -------------------------------------------------------
-      // FUEL SELECTOR - LESS TANK
-      // -------------------------------------------------------
-
-      controlStep({
-        id: "ci-13",
-
-        title:
-          "Fuel Selector Valve",
-
-        instruction:
-          "Choose the less fuel tank.",
-
-        controlId:
-          "fuel_selector",
-
-        expected: [
-          "LEFT",
-          "RIGHT",
-        ],
-
-        expectedLabel:
-          "Less Tank Check",
-
-        note:
-          "The revised checklist specifies the less tank but does not identify it as permanently LEFT or RIGHT.",
-      }),
-
-      // -------------------------------------------------------
-      // FUEL PRESSURE
-      // -------------------------------------------------------
-
-      manualStep({
-        id: "ci-7a",
-
-        title:
-          "Fuel Pressure",
-
-        instruction:
-          "Check that the fuel pressure is on green.",
-
-        actionLabel:
-          "Confirm Fuel Pressure Green",
-
-        note:
-          "Added in the revised checklist.",
-      }),
-
-      // -------------------------------------------------------
       // FUEL PUMP OFF
       // -------------------------------------------------------
       controlStep({
@@ -406,7 +338,7 @@ export const checklists = [
           "Electric Fuel Pump",
 
         instruction:
-          "Check fuel quantity: 50 liters on the right wing and 50 liters on the left wing. The endurance is 4 hours.",
+          "Turn the electric fuel pump OFF.",
 
         controlId:
           "fuel_pump",
@@ -498,6 +430,30 @@ export const checklists = [
           "Confirm Fuel Tank Check",
       }),
 
+      // -------------------------------------------------------
+      // FUEL SELECTOR
+      // -------------------------------------------------------
+      controlStep({
+        id: "ci-13",
+
+        title:
+          "Fuel Selector Valve",
+
+        instruction:
+          "Switch the fuel feeding tank to the less tank. The checklist output is LEFT TANK CHECK.",
+
+        controlId:
+          "fuel_selector",
+
+        expected:
+          "LEFT",
+
+        expectedLabel:
+          "Left Tank Check",
+
+        note:
+          "The supplied checklist also states to turn off the electric fuel pump after switching to the less tank.",
+      }),
 
       // -------------------------------------------------------
       // SEAT
@@ -729,51 +685,51 @@ export const checklists = [
       // -------------------------------------------------------
       // 12V
       // -------------------------------------------------------
-      instrumentStep({
-        id:
-          "es-2",
+ instrumentStep({
+  id:
+    "es-2",
 
-        title:
-          "Voltmeter",
+  title:
+    "Voltmeter",
 
-        instruction:
-          "Observe the voltmeter indication.",
+  instruction:
+    "Observe the voltmeter indication.",
 
-        instrumentKey:
-          "voltmeter",
+  instrumentKey:
+    "voltmeter",
 
-        instrumentLabel:
-          "VOLTMETER",
+  instrumentLabel:
+    "VOLTMETER",
 
-        unit:
-          "V",
+  unit:
+    "V",
 
-        gaugeMin:
-          0,
+  gaugeMin:
+    0,
 
-        gaugeMax:
-          18,
+  gaugeMax:
+    18,
 
-        check: {
-          type:
-            "exact",
+  check: {
+    type:
+      "exact",
 
-          value:
-            12,
-        },
+    value:
+      12,
+  },
 
-        startValue:
-          0,
+  startValue:
+    0,
 
-        normalValue:
-          12,
+  normalValue:
+    12,
 
-        settleSeconds:
-          2,
+  settleSeconds:
+    2,
 
-        note:
-          "The configured checklist indication is 12 volts.",
-      }),
+  note:
+    "The configured checklist indication is 12 volts.",
+}),
 
       // -------------------------------------------------------
       // AMMETER
@@ -835,21 +791,15 @@ export const checklists = [
           "Fuel Selector Valve",
 
         instruction:
-          "Set the fuel selector valve to the less tank.",
+          "Set the fuel selector valve to the LEFT tank.",
 
         controlId:
           "fuel_selector",
 
-        expected: [
-          "LEFT",
-          "RIGHT",
-        ],
+        expected: "LEFT",
 
         expectedLabel:
-          "Less Tank Check",
-
-        note:
-          "The revised checklist specifies the less tank but does not identify it as permanently LEFT or RIGHT.",
+          "Left Tank Check",
       }),
 
       // -------------------------------------------------------
@@ -963,51 +913,51 @@ export const checklists = [
       // -------------------------------------------------------
       // OIL PRESSURE
       // -------------------------------------------------------
-      instrumentStep({
-        id:
-          "es-12",
+ instrumentStep({
+  id:
+    "es-12",
 
-        title:
-          "Oil Pressure",
+  title:
+    "Oil Pressure",
 
-        instruction:
-          "Observe the oil pressure indication after engine start.",
+  instruction:
+    "Observe the oil pressure indication after engine start.",
 
-        instrumentKey:
-          "oilPressure",
+  instrumentKey:
+    "oilPressure",
 
-        instrumentLabel:
-          "OIL PRESS",
+  instrumentLabel:
+    "OIL PRESS",
 
-        unit:
-          "bar",
+  unit:
+    "bar",
 
-        gaugeMin:
-          0,
+  gaugeMin:
+    0,
 
-        gaugeMax:
-          7,
+  gaugeMax:
+    7,
 
-        check: {
-          type:
-            "exact",
+  check: {
+    type:
+      "exact",
 
-          value:
-            4,
-        },
+    value:
+      4,
+  },
 
-        startValue:
-          0,
+  startValue:
+    0,
 
-        normalValue:
-          4,
+  normalValue:
+    4,
 
-        settleSeconds:
-          3,
+  settleSeconds:
+    3,
 
-        note:
-          "The configured checklist indication is 4 bars.",
-      }),
+  note:
+    "The configured checklist indication is 4 bars.",
+}),
       // -------------------------------------------------------
       // SOURCE CHOKE/CHOCK WORDING
       // -------------------------------------------------------
@@ -1065,51 +1015,51 @@ export const checklists = [
       // -------------------------------------------------------
       // 14V
       // -------------------------------------------------------
-      instrumentStep({
-        id:
-          "es-16",
+instrumentStep({
+  id:
+    "es-16",
 
-        title:
-          "Voltmeter",
+  title:
+    "Voltmeter",
 
-        instruction:
-          "Observe the voltmeter indication after the Generator is switched on.",
+  instruction:
+    "Observe the voltmeter indication after the Generator is switched on.",
 
-        instrumentKey:
-          "voltmeter",
+  instrumentKey:
+    "voltmeter",
 
-        instrumentLabel:
-          "VOLTMETER",
+  instrumentLabel:
+    "VOLTMETER",
 
-        unit:
-          "V",
+  unit:
+    "V",
 
-        gaugeMin:
-          0,
+  gaugeMin:
+    0,
 
-        gaugeMax:
-          18,
+  gaugeMax:
+    18,
 
-        check: {
-          type:
-            "exact",
+  check: {
+    type:
+      "exact",
 
-          value:
-            14,
-        },
+    value:
+      14,
+  },
 
-        startValue:
-          12,
+  startValue:
+    12,
 
-        normalValue:
-          14,
+  normalValue:
+    14,
 
-        settleSeconds:
-          2,
+  settleSeconds:
+    2,
 
-        note:
-          "The configured checklist indication is 14 volts.",
-      }),
+  note:
+    "The configured checklist indication is 14 volts.",
+}),
 
       // -------------------------------------------------------
       // ENGINE INSTRUMENTS
@@ -1392,26 +1342,6 @@ export const checklists = [
       }),
 
       // -------------------------------------------------------
-      // PEDAL STEERING
-      // -------------------------------------------------------
-
-      manualStep({
-        id: "bt-9a",
-
-        title:
-          "Pedal Steering",
-
-        instruction:
-          "Check that the pedals are working.",
-
-        actionLabel:
-          "Confirm Pedal Steering Check",
-
-        note:
-          "Added in the revised checklist after the parking-brake step.",
-      }),
-
-      // -------------------------------------------------------
       // BRAKE CHECK
       // -------------------------------------------------------
       manualStep({
@@ -1472,193 +1402,193 @@ export const checklists = [
       // -------------------------------------------------------
       // OIL TEMP
       // -------------------------------------------------------
-      instrumentStep({
-        id:
-          "ru-2",
+instrumentStep({
+  id:
+    "ru-2",
 
-        title:
-          "Oil Temperature",
+  title:
+    "Oil Temperature",
 
-        instruction:
-          "Observe the oil-temperature indication.",
+  instruction:
+    "Observe the oil-temperature indication.",
 
-        instrumentKey:
-          "oilTemperature",
+  instrumentKey:
+    "oilTemperature",
 
-        instrumentLabel:
-          "OIL TEMP",
+  instrumentLabel:
+    "OIL TEMP",
 
-        unit:
-          "°C",
+  unit:
+    "°C",
 
-        gaugeMin:
-          0,
+  gaugeMin:
+    0,
 
-        gaugeMax:
-          140,
+  gaugeMax:
+    140,
 
-        check: {
-          type:
-            "range",
+  check: {
+    type:
+      "range",
 
-          min:
-            50,
+    min:
+      50,
 
-          max:
-            110,
-        },
+    max:
+      110,
+  },
 
-        startValue:
-          65,
+  startValue:
+    65,
 
-        normalValue:
-          82,
+  normalValue:
+    82,
 
-        settleSeconds:
-          3,
-      }),
+  settleSeconds:
+    3,
+}),
       // -------------------------------------------------------
       // CHT
       // -------------------------------------------------------
-      instrumentStep({
-        id:
-          "ru-3",
+instrumentStep({
+  id:
+    "ru-3",
 
-        title:
-          "Cylinder Head Temperature",
+  title:
+    "Cylinder Head Temperature",
 
-        instruction:
-          "Observe the cylinder-head-temperature indication.",
+  instruction:
+    "Observe the cylinder-head-temperature indication.",
 
-        instrumentKey:
-          "cht",
+  instrumentKey:
+    "cht",
 
-        instrumentLabel:
-          "CHT",
+  instrumentLabel:
+    "CHT",
 
-        unit:
-          "°C",
+  unit:
+    "°C",
 
-        gaugeMin:
-          0,
+  gaugeMin:
+    0,
 
-        gaugeMax:
-          160,
+  gaugeMax:
+    160,
 
-        check: {
-          type:
-            "max",
+  check: {
+    type:
+      "max",
 
-          max:
-            135,
-        },
+    max:
+      135,
+  },
 
-        startValue:
-          88,
+  startValue:
+    88,
 
-        normalValue:
-          105,
+  normalValue:
+    105,
 
-        settleSeconds:
-          3,
-      }),
+  settleSeconds:
+    3,
+}),
       // -------------------------------------------------------
       // OIL PRESSURE
       // -------------------------------------------------------
-      instrumentStep({
-        id:
-          "ru-4",
+ instrumentStep({
+  id:
+    "ru-4",
 
-        title:
-          "Oil Pressure",
+  title:
+    "Oil Pressure",
 
-        instruction:
-          "Observe the oil-pressure indication.",
+  instruction:
+    "Observe the oil-pressure indication.",
 
-        instrumentKey:
-          "oilPressure",
+  instrumentKey:
+    "oilPressure",
 
-        instrumentLabel:
-          "OIL PRESS",
+  instrumentLabel:
+    "OIL PRESS",
 
-        unit:
-          "bar",
+  unit:
+    "bar",
 
-        gaugeMin:
-          0,
+  gaugeMin:
+    0,
 
-        gaugeMax:
-          7,
+  gaugeMax:
+    7,
 
-        check: {
-          type:
-            "range",
+  check: {
+    type:
+      "range",
 
-          min:
-            2,
+    min:
+      2,
 
-          max:
-            5,
-        },
+    max:
+      5,
+  },
 
-        startValue:
-          3.1,
+  startValue:
+    3.1,
 
-        normalValue:
-          3.8,
+  normalValue:
+    3.8,
 
-        settleSeconds:
-          2,
-      }),
+  settleSeconds:
+    2,
+}),
 
       // -------------------------------------------------------
       // FUEL PRESSURE
       // -------------------------------------------------------
-      instrumentStep({
-        id:
-          "ru-5",
+ instrumentStep({
+  id:
+    "ru-5",
 
-        title:
-          "Fuel Pressure",
+  title:
+    "Fuel Pressure",
 
-        instruction:
-          "Observe the fuel-pressure indication.",
+  instruction:
+    "Observe the fuel-pressure indication.",
 
-        instrumentKey:
-          "fuelPressure",
+  instrumentKey:
+    "fuelPressure",
 
-        instrumentLabel:
-          "FUEL PRESS",
+  instrumentLabel:
+    "FUEL PRESS",
 
-        unit:
-          "PSI",
+  unit:
+    "PSI",
 
-        gaugeMin:
-          0,
+  gaugeMin:
+    0,
 
-        gaugeMax:
-          8,
+  gaugeMax:
+    8,
 
-        check: {
-          type:
-            "range",
+  check: {
+    type:
+      "range",
 
-          min:
-            2.2,
+    min:
+      2.2,
 
-          max:
-            5.8,
-        },
+    max:
+      5.8,
+  },
 
-        startValue:
-          2.8,
+  startValue:
+    2.8,
 
-        normalValue:
-          4.1,
+  normalValue:
+    4.1,
 
-        settleSeconds:
-          2,
-      }),
+  settleSeconds:
+    2,
+}),
 
       // -------------------------------------------------------
       // GENERATOR TEST
@@ -1722,32 +1652,6 @@ export const checklists = [
 
         note:
           "The supplied checklist does not identify the fullest tank as permanently LEFT or RIGHT, so this is not hard-coded.",
-      }),
-
-      // -------------------------------------------------------
-      // FUEL PUMP OFF AFTER FULLEST TANK
-      // -------------------------------------------------------
-
-      controlStep({
-        id: "ru-8a",
-
-        title:
-          "Electric Fuel Pump",
-
-        instruction:
-          "Turn the electric fuel pump OFF after selecting the fullest tank.",
-
-        controlId:
-          "fuel_pump",
-
-        expected:
-          "OFF",
-
-        expectedLabel:
-          "Electric Fuel Pump OFF",
-
-        note:
-          "The revised checklist procedure and keyword say ELECTRIC FUEL PUMP OFF. Its output cell appears to show ON, so this step follows the stated TURN OFF instruction and OFF keyword.",
       }),
 
       // -------------------------------------------------------
@@ -2260,32 +2164,6 @@ export const checklists = [
       "Beginner",
 
     steps: [
-
-      // -------------------------------------------------------
-      // PARK BRAKES
-      // -------------------------------------------------------
-
-      controlStep({
-        id: "al-0",
-
-        title:
-          "Parking Brakes",
-
-        instruction:
-          "Engage the parking brakes before setting the transponder.",
-
-        controlId:
-          "parking_brake",
-
-        expected:
-          "ENGAGED",
-
-        expectedLabel:
-          "Parking Brakes Engaged",
-
-        note:
-          "Added in the revised checklist before the transponder step.",
-      }),
       // -------------------------------------------------------
       // TRANSPONDER
       // -------------------------------------------------------
@@ -2658,30 +2536,21 @@ export const checklists = [
       // -------------------------------------------------------
       // GENERATOR
       // -------------------------------------------------------
-      // -------------------------------------------------------
-      // ELECTRIC FUEL PUMP
-      // -------------------------------------------------------
-
       controlStep({
         id: "sd-13",
 
-        title:
-          "Electric Fuel Pump",
+        title: "Generator",
 
         instruction:
-          "Turn the electric fuel pump OFF.",
+          "Turn the generator OFF.",
 
         controlId:
-          "fuel_pump",
+          "generator",
 
-        expected:
-          "OFF",
+        expected: "OFF",
 
         expectedLabel:
-          "Electric Fuel Pump OFF",
-
-        note:
-          "The revised Engine Securing checklist says to change the Generator step to Electric Fuel Pump OFF.",
+          "Generator OFF",
       }),
 
       // -------------------------------------------------------

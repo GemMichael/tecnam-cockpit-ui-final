@@ -1,403 +1,126 @@
 import {
-  CheckCircle2,
+  Compass,
+  Fuel,
+  Lightbulb,
   Plane,
+  Power,
+  Radio,
   RefreshCcw,
   RotateCcw,
   Settings2,
 } from "lucide-react";
 
-import { useMemo } from "react";
-
-import CommsTrainingPanel from "../components/CommsTrainingPanel";
-import SimulatedInstrumentPanel from "../components/SimulatedInstrumentPanel";
+import ChecklistPanel from "../components/ChecklistPanel";
 
 import { controlSections } from "../data/controlDefinitions";
 import { checklists } from "../data/checklists";
 
+import TrainingScoreCard from "../components/TrainingScoreCard";
+
 import { useSimulator } from "../context/SimulatorContext";
 
+import SimulatedInstrumentPanel from "../components/SimulatedInstrumentPanel";
 
 /* ============================================================
-   PHYSICAL CONTROLS
+   COCKPIT CONTROL BUTTONS
 
-   These stay in SimulatorContext / checklist logic,
-   but are never rendered as touchscreen buttons. Intercom, Radio, and Transponder are also physical.
+   CURRENT:
+   React button -> setControl()
+
+   LATER:
+   GPIO -> Python -> WebSocket -> setControl()
+
+   This means the checklist logic will NOT need to change
+   when physical controls are connected later.
    ============================================================ */
 
-const HARDWARE_CONTROL_IDS = new Set([
-  "master_switch",
-  "generator",
-  "fuel_pump",
-  "friction_lock",
-  "flaps",
-  "chronometer",
-  "avionics_master",
-  "strobe_light",
-  "landing_light",
-  "nav_light",
-  "intercom",
-  "radio",
-  "transponder",
-]);
-
-
-/* ============================================================
-   HELPERS
-   ============================================================ */
-
-function getStepControlId(step) {
-  if (!step) {
-    return null;
-  }
-
-  if (
-    step.type === "control" ||
-    step.type === "sequence"
-  ) {
-    return step.controlId || null;
-  }
-
-  if (step.type === "timed") {
-    return step.requiredControlId || null;
-  }
-
-  return null;
-}
-
-
-function getChecklistControlIds(checklist) {
-  if (!checklist?.steps) {
-    return [];
-  }
-
-  const ids = [];
-
-  checklist.steps.forEach((step) => {
-    const controlId =
-      getStepControlId(step);
-
-    if (
-      controlId &&
-      !ids.includes(controlId)
-    ) {
-      ids.push(controlId);
-    }
-  });
-
-  return ids;
-}
-
-
-/*
-  LANDSCAPE GRID
-
-  The touchscreen controls are deliberately packed into a fixed
-  number of rows so the control area itself never needs vertical
-  scrolling.
-
-  Examples:
-  1-4 controls   -> 4 columns / 1 row
-  5-8 controls   -> 4 columns / 2 rows
-  9-10 controls  -> 5 columns / 2 rows
-  11-12 controls -> 4 columns / 3 rows
-  13-15 controls -> 5 columns / 3 rows
-*/
-function getControlGridLayout(count) {
-  if (count <= 4) {
-    return {
-      columns: Math.max(count, 1),
-      rows: 1,
-      dense: false,
-    };
-  }
-
-  if (count <= 8) {
-    return {
-      columns: 4,
-      rows: 2,
-      dense: false,
-    };
-  }
-
-  if (count <= 10) {
-    return {
-      columns: 5,
-      rows: 2,
-      dense: true,
-    };
-  }
-
-  if (count <= 12) {
-    return {
-      columns: 4,
-      rows: 3,
-      dense: true,
-    };
-  }
-
-  if (count <= 15) {
-    return {
-      columns: 5,
-      rows: 3,
-      dense: true,
-    };
-  }
-
-  return {
-    columns: 5,
-    rows: Math.ceil(count / 5),
-    dense: true,
-  };
-}
-
-
-/* ============================================================
-   TOUCHSCREEN CONTROL CARD
-   ============================================================ */
-
-function TouchControl({
+function CockpitControl({
   control,
   value,
   onChange,
-  isCurrent,
-  dense,
 }) {
-  const options =
-    control?.options || [];
-
-  const isSingleOption =
-    options.length === 1;
-
-  const singleOption =
-    isSingleOption
-      ? options[0]
-      : null;
-
-  const singleOptionActive =
-    Boolean(
-      singleOption &&
-      value === singleOption.value
-    );
-
-  const displayedValue =
-    isSingleOption
-      ? singleOptionActive
-        ? singleOption.label
-        : "OFF"
-      : value ?? "—";
-
-  function handleOptionPress(
-    option
-  ) {
-    /*
-      Single-selector controls behave like a push-button toggle.
-
-      Example:
-      Circuit Breakers
-        first press  -> ALL_IN
-        second press -> OFF
-
-      We keep this inside the UI layer so controlDefinitions.js
-      and the checklist expected value (ALL_IN) do not need to
-      change.
-    */
-    if (isSingleOption) {
-      const nextValue =
-        value === option.value
-          ? "OFF"
-          : option.value;
-
-      onChange(
-        control.id,
-        nextValue,
-        "ui"
-      );
-
-      return;
-    }
-
-    onChange(
-      control.id,
-      option.value,
-      "ui"
-    );
-  }
-
   return (
     <div
-      className={`
-        flex
-        h-full
-        min-h-0
-        flex-col
-        overflow-hidden
+      className="
         rounded-xl
         border
-        transition
-
-        ${
-          dense
-            ? "p-1.5"
-            : "p-2"
-        }
-
-        ${
-          isCurrent
-            ? `
-              border-blue-400
-              bg-blue-50
-              shadow-[0_0_0_2px_rgba(59,130,246,.10)]
-            `
-            : `
-              border-slate-200
-              bg-white
-              shadow-sm
-            `
-        }
-      `}
+        border-black/40
+        bg-gradient-to-b
+        from-[#373c42]
+        to-[#171a1e]
+        p-3
+        shadow-[inset_0_1px_0_rgba(255,255,255,.12),0_5px_12px_rgba(0,0,0,.35)]
+      "
     >
-      <div
-        className={`
-          flex
-          shrink-0
-          items-center
-          justify-between
-          gap-1.5
-
-          ${
-            dense
-              ? "mb-1"
-              : "mb-1.5"
-          }
-        `}
-      >
-        <p
-          className={`
-            min-w-0
-            flex-1
-            truncate
-            font-black
-            uppercase
-            tracking-[0.10em]
-            text-slate-700
-
-            ${
-              dense
-                ? "text-[7px]"
-                : "text-[8px]"
-            }
-          `}
-        >
+      {/* CONTROL NAME */}
+      <div className="mb-3 text-center">
+        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-200">
           {control.label}
         </p>
 
-        <span
-          className={`
-            shrink-0
-            rounded
-            px-1.5
-            py-0.5
-            font-black
-
-            ${
-              isSingleOption &&
-              singleOptionActive
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-slate-100 text-slate-500"
-            }
-
-            ${
-              dense
-                ? "text-[7px]"
-                : "text-[8px]"
-            }
-          `}
-        >
-          {displayedValue}
-        </span>
+        <p className="mt-1 text-[10px] font-bold text-emerald-400">
+          {value ?? "—"}
+        </p>
       </div>
 
+      {/* BUTTON OPTIONS */}
       <div
-        className={`
-          grid
-          min-h-0
-          flex-1
-          gap-1
-
-          ${
-            isSingleOption
-              ? "grid-cols-1"
-              : options.length >= 3
-                ? "grid-cols-3"
-                : "grid-cols-2"
-          }
-        `}
+        className={`grid gap-1.5 ${control.options.length >= 3
+            ? "grid-cols-3"
+            : "grid-cols-2"
+          }`}
       >
-        {options.map((option) => {
+        {control.options.map((option) => {
           const active =
             value === option.value;
 
           return (
             <button
               key={option.value}
-              type="button"
               onClick={() =>
-                handleOptionPress(
-                  option
+                onChange(
+                  control.id,
+                  option.value,
+                  "ui"
                 )
               }
-              aria-pressed={
-                isSingleOption
-                  ? active
-                  : undefined
-              }
               className={`
-                h-full
-                min-h-0
-                min-w-0
+                min-h-[42px]
                 rounded-lg
                 border
-                px-1
-                font-bold
+                px-2
+                py-2
+                text-[9px]
+                font-black
                 uppercase
-                leading-tight
                 tracking-wide
-                transition
-                active:scale-[0.98]
+                transition-all
+                duration-150
+                active:translate-y-[1px]
 
-                ${
-                  dense
-                    ? "py-1 text-[8px]"
-                    : "py-1.5 text-[9px]"
-                }
-
-                ${
-                  active
-                    ? `
-                      border-emerald-400
-                      bg-emerald-600
+                ${active
+                  ? `
+                      border-emerald-300
+                      bg-gradient-to-b
+                      from-emerald-400
+                      to-emerald-700
                       text-white
-                      shadow-sm
+                      shadow-[0_0_14px_rgba(52,211,153,.4)]
                     `
-                    : `
-                      border-slate-200
-                      bg-slate-50
-                      text-slate-600
-                      hover:border-blue-300
-                      hover:bg-blue-50
+                  : `
+                      border-black/60
+                      bg-gradient-to-b
+                      from-[#50565d]
+                      to-[#24272b]
+                      text-slate-300
+                      shadow-[inset_0_1px_0_rgba(255,255,255,.12)]
+                      hover:border-slate-300
+                      hover:text-white
                     `
                 }
               `}
             >
-              <span className="block truncate">
-                {isSingleOption
-                  ? `${option.label} · ${
-                      active
-                        ? "ON"
-                        : "OFF"
-                    }`
-                  : option.label}
-              </span>
+              {option.label}
             </button>
           );
         })}
@@ -406,268 +129,42 @@ function TouchControl({
   );
 }
 
-
 /* ============================================================
-   TRAINING HEADER CARD
+   COCKPIT PANEL SECTION
    ============================================================ */
 
-function TrainingHeaderCard({
-  activeChecklistId,
-  selectChecklist,
-  progressPercentage,
-  resetChecklistProgress,
-  resetAllControls,
-  hardResetAll,
+function PanelSection({
+  title,
+  icon: Icon,
+  children,
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex shrink-0 items-center gap-2.5 px-3 py-2.5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#08233f] text-white">
-          <Plane size={17} />
-        </div>
+    <div
+      className="
+        rounded-2xl
+        border
+        border-[#4d321d]/60
+        bg-black/10
+        p-4
+        shadow-[inset_0_1px_1px_rgba(255,255,255,.18)]
+      "
+    >
+      <div className="mb-4 flex items-center gap-2">
+        {Icon && (
+          <div className="rounded-lg bg-[#332315]/80 p-1.5 text-amber-200">
+            <Icon size={14} />
+          </div>
+        )}
 
-        <div className="min-w-0 flex-1">
-          <p className="text-[7px] font-black uppercase tracking-[0.18em] text-blue-600">
-            TECNAM P2002JF
-          </p>
-
-          <p className="truncate text-sm font-black text-slate-900">
-            Cockpit Training
-          </p>
-        </div>
-
-        <button
-          type="button"
-          title="Reset checklist"
-          aria-label="Reset checklist"
-          onClick={
-            resetChecklistProgress
-          }
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 active:bg-slate-100"
-        >
-          <RotateCcw size={14} />
-        </button>
-
-        <button
-          type="button"
-          title="Reset controls"
-          aria-label="Reset controls"
-          onClick={
-            resetAllControls
-          }
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 active:bg-slate-100"
-        >
-          <RefreshCcw size={14} />
-        </button>
-
-        <button
-          type="button"
-          title="Full reset"
-          aria-label="Full reset"
-          onClick={
-            hardResetAll
-          }
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white active:bg-slate-700"
-        >
-          <Settings2 size={14} />
-        </button>
+        <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-[#3d2a19]">
+          {title}
+        </h3>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_62px] items-center gap-2.5 border-t border-slate-100 bg-slate-50 px-3 py-2">
-        <div className="min-w-0">
-          <label className="mb-1 block text-[7px] font-black uppercase tracking-[0.16em] text-slate-400">
-            Training Procedure
-          </label>
-
-          <select
-            value={
-              activeChecklistId
-            }
-            onChange={(event) =>
-              selectChecklist(
-                event.target.value
-              )
-            }
-            className="
-              h-[38px]
-              w-full
-              rounded-xl
-              border
-              border-slate-200
-              bg-white
-              px-3
-              text-xs
-              font-bold
-              text-slate-800
-              outline-none
-              focus:border-blue-500
-            "
-          >
-            {checklists.map(
-              (checklist) => (
-                <option
-                  key={
-                    checklist.id
-                  }
-                  value={
-                    checklist.id
-                  }
-                >
-                  {
-                    checklist.title
-                  }
-                </option>
-              )
-            )}
-          </select>
-        </div>
-
-        <div className="text-right">
-          <p className="text-[7px] font-black uppercase tracking-wider text-slate-400">
-            Progress
-          </p>
-
-          <p className="mt-0.5 text-2xl font-black text-slate-900">
-            {progressPercentage}%
-          </p>
-        </div>
-      </div>
+      {children}
     </div>
   );
 }
-
-
-/* ============================================================
-   CURRENT STEP CARD
-   ============================================================ */
-
-function CurrentStepCard({
-  currentStep,
-  currentStepIndex,
-  totalSteps,
-  feedback,
-  isChecklistComplete,
-  isHardwareStep,
-  markManualStepComplete,
-}) {
-  if (isChecklistComplete) {
-    return (
-      <div className="flex h-full items-center rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
-            <CheckCircle2 size={18} />
-          </div>
-
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">
-              Checklist Complete
-            </p>
-
-            <p className="mt-0.5 text-[10px] font-semibold text-emerald-800">
-              Select another training procedure whenever you are ready.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!currentStep) {
-    return null;
-  }
-
-  const expected =
-    currentStep.expectedLabel ||
-    currentStep.requiredLabel ||
-    null;
-
-  const manualStep =
-    currentStep.type === "manual" ||
-    currentStep.type === "future";
-
-  return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-1.5">
-        <div>
-          <p className="text-[8px] font-black uppercase tracking-[0.18em] text-blue-600">
-            Current Step
-          </p>
-
-          <p className="text-[9px] font-bold text-slate-500">
-            Step {currentStepIndex + 1} of {totalSteps}
-          </p>
-        </div>
-
-        <p className="max-w-[35%] truncate text-right text-[8px] font-black uppercase tracking-wide text-slate-400">
-          {currentStep.type}
-        </p>
-      </div>
-
-      <div className="touch-scroll min-h-0 flex-1 overflow-y-auto px-3 py-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-base font-black leading-tight text-slate-900">
-              {currentStep.title}
-            </h2>
-
-            <p className="mt-1 text-[10px] leading-4 text-slate-600">
-              {currentStep.instruction}
-            </p>
-
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              {expected && (
-                <span className="rounded-lg bg-slate-100 px-2 py-1 text-[7px] font-black uppercase tracking-wide text-slate-600">
-                  Required: {expected}
-                </span>
-              )}
-
-              {isHardwareStep && (
-                <span className="rounded-lg bg-amber-100 px-2 py-1 text-[7px] font-black uppercase tracking-wide text-amber-700">
-                  Use physical cockpit control
-                </span>
-              )}
-            </div>
-          </div>
-
-          {manualStep && (
-            <button
-              type="button"
-              onClick={
-                markManualStepComplete
-              }
-              className="
-                min-h-[38px]
-                shrink-0
-                rounded-lg
-                bg-blue-600
-                px-3
-                text-[9px]
-                font-black
-                text-white
-                shadow-sm
-                active:scale-[0.98]
-              "
-            >
-              {currentStep.actionLabel ||
-                "Confirm"}
-            </button>
-          )}
-        </div>
-
-        <div className="mt-2 rounded-lg bg-slate-900 px-2.5 py-1.5">
-          <p className="text-[7px] font-black uppercase tracking-[0.15em] text-slate-500">
-            Feedback
-          </p>
-
-          <p className="mt-0.5 text-[8px] font-semibold leading-3 text-white">
-            {feedback}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 
 /* ============================================================
    MAIN PAGE
@@ -679,355 +176,504 @@ function CockpitControlsPage() {
     setControl,
 
     activeChecklistId,
-    currentChecklist,
     selectChecklist,
-
-    currentStepIndex,
-    currentStep,
-    progressPercentage,
-    isChecklistComplete,
-
-    markManualStepComplete,
-    markCommsStepComplete,
-
-    feedback,
 
     resetChecklistProgress,
     resetAllControls,
     hardResetAll,
+
+    lastEvent,
   } = useSimulator();
 
-
   /* ==========================================================
-     CONTROL LOOKUP
+     GET CONTROL GROUPS
      ========================================================== */
 
-  const allControls =
-    useMemo(
-      () =>
-        controlSections.flatMap(
-          (section) =>
-            section.controls ||
-            []
-        ),
-      []
+  const electrical =
+    controlSections.find(
+      (section) =>
+        section.id === "electrical"
     );
 
-
-  const controlById =
-    useMemo(() => {
-      const map =
-        new Map();
-
-      allControls.forEach(
-        (control) => {
-          map.set(
-            control.id,
-            control
-          );
-        }
-      );
-
-      return map;
-    }, [allControls]);
-
-
-  /* ==========================================================
-     CURRENT CHECKLIST CONTROLS
-     ========================================================== */
-
-  const checklistControlIds =
-    useMemo(
-      () =>
-        getChecklistControlIds(
-          currentChecklist
-        ),
-      [currentChecklist]
+  const engine =
+    controlSections.find(
+      (section) =>
+        section.id === "fuel-engine"
     );
 
-
-  /*
-    IMPORTANT:
-    Hardware controls are filtered out completely.
-  */
-  const touchscreenControls =
-    useMemo(
-      () =>
-        checklistControlIds
-          .filter(
-            (id) =>
-              !HARDWARE_CONTROL_IDS.has(
-                id
-              )
-          )
-          .map((id) =>
-            controlById.get(id)
-          )
-          .filter(Boolean),
-      [
-        checklistControlIds,
-        controlById,
-      ]
+  const lights =
+    controlSections.find(
+      (section) =>
+        section.id === "lights"
     );
 
-
-  const currentStepControlId =
-    getStepControlId(
-      currentStep
+  const avionics =
+    controlSections.find(
+      (section) =>
+        section.id === "avionics"
     );
 
-
-  const isHardwareStep =
-    Boolean(
-      currentStepControlId &&
-      HARDWARE_CONTROL_IDS.has(
-        currentStepControlId
-      )
+  const flight =
+    controlSections.find(
+      (section) =>
+        section.id === "flight-cabin"
     );
-
-
-  const totalSteps =
-    currentChecklist?.steps
-      ?.length || 0;
-
-
-  const specialWorkspace =
-    currentStep?.type ===
-      "comms" ||
-    currentStep?.type ===
-      "instrument" ||
-    currentStep?.type ===
-      "timed";
-
-
-  /* ==========================================================
-     FIXED LANDSCAPE GRID
-
-     This is what removes the vertical scrollbar from the
-     touchscreen-control area.
-     ========================================================== */
-
-  const gridLayout =
-    useMemo(
-      () =>
-        getControlGridLayout(
-          touchscreenControls.length
-        ),
-      [touchscreenControls.length]
-    );
-
-
-  /* ==========================================================
-     UI
-     ========================================================== */
 
   return (
-    <div
-      className="
-        flex
-        h-[calc(100dvh-92px)]
-        min-h-0
-        flex-col
-        gap-2
-        overflow-hidden
-      "
-    >
-      {/* ======================================================
-          TOP - SIDE BY SIDE
-          ====================================================== */}
-
-      <section
-        className="
-          grid
-          h-[158px]
-          shrink-0
-          grid-cols-[0.93fr_1.07fr]
-          items-stretch
-          gap-2
-        "
-      >
-        <TrainingHeaderCard
-          activeChecklistId={
-            activeChecklistId
-          }
-          selectChecklist={
-            selectChecklist
-          }
-          progressPercentage={
-            progressPercentage
-          }
-          resetChecklistProgress={
-            resetChecklistProgress
-          }
-          resetAllControls={
-            resetAllControls
-          }
-          hardResetAll={
-            hardResetAll
-          }
-        />
-
-        <CurrentStepCard
-          currentStep={
-            currentStep
-          }
-          currentStepIndex={
-            currentStepIndex
-          }
-          totalSteps={
-            totalSteps
-          }
-          feedback={
-            feedback
-          }
-          isChecklistComplete={
-            isChecklistComplete
-          }
-          isHardwareStep={
-            isHardwareStep
-          }
-          markManualStepComplete={
-            markManualStepComplete
-          }
-        />
-      </section>
-
+    <div className="space-y-6">
 
       {/* ======================================================
-          LARGE WORKSPACE
+          HEADER
           ====================================================== */}
 
-      <section className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-blue-600">
+            TECNAM P2002JF(Testing speech to text accuracy in local host environment. Don’t forget to revert the changes once testing is complete. Pull the lastest push from github.)
+          </p>
 
-        {/* COMMUNICATION */}
+          <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
+            Cockpit Controls(Note: switches set to high position(hardware))
+          </h1>
 
-        {currentStep?.type ===
-          "comms" && (
-          <div className="touch-scroll h-full min-h-0 overflow-y-auto p-2">
-            <CommsTrainingPanel
-              scenarioId={
-                currentStep.scenario
+          <p className="mt-2 text-sm text-slate-500">
+            Interactive cockpit switch and control
+            training panel
+          </p>
+        </div>
+
+        {/* RESET BUTTONS */}
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={
+              resetChecklistProgress
+            }
+            className="
+              flex
+              items-center
+              gap-2
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              px-4
+              py-2.5
+              text-xs
+              font-semibold
+              text-slate-600
+              shadow-sm
+              transition
+              hover:border-blue-300
+              hover:text-blue-600
+            "
+          >
+            <RotateCcw size={15} />
+            Reset Checklist
+          </button>
+
+          <button
+            onClick={resetAllControls}
+            className="
+              flex
+              items-center
+              gap-2
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              px-4
+              py-2.5
+              text-xs
+              font-semibold
+              text-slate-600
+              shadow-sm
+              transition
+              hover:border-blue-300
+              hover:text-blue-600
+            "
+          >
+            <RefreshCcw size={15} />
+            Reset Controls
+          </button>
+
+          <button
+            onClick={hardResetAll}
+            className="
+              flex
+              items-center
+              gap-2
+              rounded-xl
+              bg-blue-600
+              px-4
+              py-2.5
+              text-xs
+              font-semibold
+              text-white
+              shadow-lg
+              shadow-blue-500/20
+              transition
+              hover:bg-blue-700
+            "
+          >
+            <Settings2 size={15} />
+            Full Reset
+          </button>
+        </div>
+      </div>
+
+      {/* ======================================================
+          CHECKLIST SELECTION
+          ====================================================== */}
+
+      <div className="glass-panel rounded-2xl p-4">
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+              Training Procedure
+            </label>
+
+            <select
+              value={activeChecklistId}
+              onChange={(event) =>
+                selectChecklist(
+                  event.target.value
+                )
               }
-              onComplete={
-                markCommsStepComplete
-              }
-            />
+              className="
+                w-full
+                max-w-xl
+                rounded-xl
+                border
+                border-slate-200
+                bg-white
+                px-4
+                py-3
+                text-sm
+                font-semibold
+                text-slate-700
+                outline-none
+                focus:border-blue-500
+              "
+            >
+              {checklists.map(
+                (checklist) => (
+                  <option
+                    key={checklist.id}
+                    value={checklist.id}
+                  >
+                    {checklist.title}
+                  </option>
+                )
+              )}
+            </select>
           </div>
-        )}
 
+          {/* STATUS */}
 
-        {/* INSTRUMENT / TIMER */}
+          <div className="flex items-center gap-3">
+            <div className="relative h-3 w-3">
+              <div className="absolute inset-0 animate-ping rounded-full bg-emerald-400 opacity-40" />
 
-        {(currentStep?.type ===
-          "instrument" ||
-          currentStep?.type ===
-            "timed") && (
-          <div className="touch-scroll h-full min-h-0 overflow-y-auto p-2">
-            <SimulatedInstrumentPanel />
-          </div>
-        )}
-
-
-        {/* ====================================================
-            NORMAL TOUCHSCREEN CONTROLS
-
-            NO vertical scroll here.
-            ==================================================== */}
-
-        {!specialWorkspace && (
-          <div className="flex h-full min-h-0 flex-col overflow-hidden">
-            <div className="flex h-[42px] shrink-0 items-center justify-between border-b border-slate-100 px-3">
-              <div>
-                <p className="text-[8px] font-black uppercase tracking-[0.17em] text-blue-600">
-                  Touchscreen Controls
-                </p>
-
-                <p className="text-[7px] text-slate-400">
-                  Controls available for this selected procedure
-                </p>
-              </div>
-
-              <span className="rounded-lg bg-blue-50 px-2 py-1 text-[7px] font-black text-blue-700">
-                {
-                  touchscreenControls.length
-                }{" "}
-                controls
-              </span>
+              <div className="relative h-3 w-3 rounded-full bg-emerald-500" />
             </div>
 
-            <div className="min-h-0 flex-1 overflow-hidden p-2">
-              {touchscreenControls.length >
-              0 ? (
-                <div
-                  className="
-                    grid
-                    h-full
-                    min-h-0
-                    w-full
-                    gap-1.5
-                    overflow-hidden
-                  "
-                  style={{
-                    gridTemplateColumns:
-                      `repeat(${gridLayout.columns}, minmax(0, 1fr))`,
+            <div>
+              <p className="text-xs font-bold text-slate-700">
+                Simulator Active
+              </p>
 
-                    gridTemplateRows:
-                      `repeat(${gridLayout.rows}, minmax(0, 1fr))`,
-                  }}
-                >
-                  {touchscreenControls.map(
+              <p className="text-[10px] text-slate-400">
+                Virtual control mode
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ======================================================
+          MAIN LAYOUT
+          ====================================================== */}
+
+      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_390px]">
+
+        {/* ====================================================
+            COCKPIT CONTROL PANEL
+            ==================================================== */}
+
+        <div
+          className="
+            overflow-hidden
+            rounded-[32px]
+            border-[8px]
+            border-[#24282d]
+            bg-[#171a1e]
+            shadow-[0_24px_70px_rgba(15,23,42,.25)]
+          "
+        >
+
+          {/* TOP COCKPIT BAR */}
+
+          <div className="border-b border-black bg-gradient-to-b from-[#31363b] to-[#111417] px-5 py-3">
+            <div className="flex items-center justify-between">
+
+              <div className="flex items-center gap-3">
+                <Plane
+                  size={18}
+                  className="text-sky-400"
+                />
+
+                <div>
+                  <p className="text-[10px] font-bold tracking-[0.2em] text-white">
+                    TECNAM
+                  </p>
+
+                  <p className="text-xs font-black italic tracking-wide text-slate-300">
+                    P2002 JF
+                  </p>
+                </div>
+              </div>
+
+              {/* INDICATOR LIGHTS */}
+
+              <div className="flex gap-2">
+                <div className="h-3 w-6 rounded-sm bg-red-500 shadow-[0_0_8px_rgba(239,68,68,.4)]" />
+
+                <div className="h-3 w-6 rounded-sm bg-emerald-500 shadow-[0_0_8px_rgba(34,197,94,.35)]" />
+
+                <div className="h-3 w-6 rounded-sm bg-amber-400 shadow-[0_0_8px_rgba(250,204,21,.35)]" />
+              </div>
+
+            </div>
+          </div>
+
+          {/* ==================================================
+              WOOD COCKPIT PANEL
+              ================================================== */}
+
+          <div
+            className="relative overflow-hidden p-5 md:p-7"
+            style={{
+              background: `
+                linear-gradient(
+                  90deg,
+                  rgba(255,255,255,.08),
+                  transparent 25%,
+                  rgba(0,0,0,.07) 50%,
+                  transparent 75%,
+                  rgba(255,255,255,.05)
+                ),
+                repeating-linear-gradient(
+                  8deg,
+                  #b67b43 0px,
+                  #b67b43 3px,
+                  #a66a35 4px,
+                  #b97e44 8px,
+                  #9c6231 11px
+                )
+              `,
+            }}
+          >
+
+            {/* PANEL SCREWS */}
+
+            <div className="absolute left-4 top-4 h-2 w-2 rounded-full bg-[#5c4028] shadow-inner" />
+
+            <div className="absolute right-4 top-4 h-2 w-2 rounded-full bg-[#5c4028] shadow-inner" />
+
+            {/* =================================================
+                ELECTRICAL PANEL
+                ================================================= */}
+
+            <PanelSection
+              title="Electrical System"
+              icon={Power}
+            >
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {electrical?.controls.map(
+                  (control) => (
+                    <CockpitControl
+                      key={control.id}
+                      control={control}
+                      value={
+                        controls[
+                        control.id
+                        ]
+                      }
+                      onChange={setControl}
+                    />
+                  )
+                )}
+              </div>
+            </PanelSection>
+
+            {/* =================================================
+                ENGINE / FUEL + LIGHTS
+                ================================================= */}
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-[1.6fr_.8fr]">
+
+              {/* ENGINE */}
+
+              <PanelSection
+                title="Engine & Fuel"
+                icon={Fuel}
+              >
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {engine?.controls.map(
                     (control) => (
-                      <TouchControl
-                        key={
-                          control.id
-                        }
-                        control={
-                          control
-                        }
+                      <CockpitControl
+                        key={control.id}
+                        control={control}
                         value={
                           controls[
-                            control.id
+                          control.id
                           ]
                         }
-                        onChange={
-                          setControl
-                        }
-                        isCurrent={
-                          currentStepControlId ===
-                          control.id
-                        }
-                        dense={
-                          gridLayout.dense
-                        }
+                        onChange={setControl}
                       />
                     )
                   )}
                 </div>
-              ) : (
-                <div className="flex h-full items-center justify-center text-center">
-                  <div>
-                    <CheckCircle2
-                      size={26}
-                      className="mx-auto text-slate-300"
-                    />
+              </PanelSection>
 
-                    <p className="mt-2 text-[10px] font-bold text-slate-500">
-                      No touchscreen control is needed for this step.
-                    </p>
+              {/* LIGHTS */}
 
-                    <p className="mt-1 text-[8px] text-slate-400">
-                      Follow the checklist instruction above.
-                    </p>
-                  </div>
+              <PanelSection
+                title="Aircraft Lights"
+                icon={Lightbulb}
+              >
+                <div className="grid gap-3">
+                  {lights?.controls.map(
+                    (control) => (
+                      <CockpitControl
+                        key={control.id}
+                        control={control}
+                        value={
+                          controls[
+                          control.id
+                          ]
+                        }
+                        onChange={setControl}
+                      />
+                    )
+                  )}
                 </div>
+              </PanelSection>
+
+            </div>
+
+            {/* =================================================
+                AVIONICS
+                ================================================= */}
+
+            <div className="mt-4">
+              <PanelSection
+                title="Communication & Navigation"
+                icon={Radio}
+              >
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {avionics?.controls.map(
+                    (control) => (
+                      <CockpitControl
+                        key={control.id}
+                        control={control}
+                        value={
+                          controls[
+                          control.id
+                          ]
+                        }
+                        onChange={setControl}
+                      />
+                    )
+                  )}
+                </div>
+              </PanelSection>
+            </div>
+
+            {/* =================================================
+                FLIGHT / CABIN
+                ================================================= */}
+
+            <div className="mt-4">
+              <PanelSection
+                title="Flight & Cabin Controls"
+                icon={Compass}
+              >
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {flight?.controls.map(
+                    (control) => (
+                      <CockpitControl
+                        key={control.id}
+                        control={control}
+                        value={
+                          controls[
+                          control.id
+                          ]
+                        }
+                        onChange={setControl}
+                      />
+                    )
+                  )}
+                </div>
+              </PanelSection>
+            </div>
+
+          </div>
+
+          {/* ===================================================
+              BOTTOM STATUS
+              =================================================== */}
+
+          <div className="border-t border-black bg-[#14171a] px-5 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+
+              <div className="flex items-center gap-2">
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_7px_rgba(34,197,94,.7)]" />
+
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Cockpit Controls Active
+                </span>
+              </div>
+
+              {lastEvent && (
+                <p className="font-mono text-[10px] text-slate-400">
+                  INPUT:{" "}
+                  <span className="text-sky-400">
+                    {lastEvent.controlId}
+                  </span>
+
+                  {" → "}
+
+                  <span className="text-emerald-400">
+                    {lastEvent.value}
+                  </span>
+                </p>
               )}
+
             </div>
           </div>
-        )}
-      </section>
+        </div>
+
+        {/* ====================================================
+            CHECKLIST
+            ==================================================== */}
+
+        <div className="space-y-6">
+          <div className="sticky top-24 space-y-6">
+
+            <SimulatedInstrumentPanel />
+
+            <ChecklistPanel />
+
+            <TrainingScoreCard />
+
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
-
 
 export default CockpitControlsPage;

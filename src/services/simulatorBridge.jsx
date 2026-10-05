@@ -3,68 +3,325 @@
 | SIMULATOR BRIDGE
 |--------------------------------------------------------------------------
 |
-| FRONTEND-ONLY VERSION
+| Handles communication between the React frontend and the Raspberry Pi
+| hardware bridge.
 |
-| Right now these functions only simulate communication.
+| Physical control flow:
 |
-| LATER:
+| Physical Switch / Button
+|          ↓
+| Raspberry Pi GPIO / PCA9555
+|          ↓
+| backend/hardware_bridge.py
+|          ↓
+| WebSocket :8001/ws/hardware
+|          ↓
+| simulatorBridge
+|          ↓
+| SimulatorContext
+|          ↓
+| setControl(controlId, value, "gpio")
+|          ↓
+| Checklist / Grading / UI
 |
-| React
-|    ↓ WebSocket / HTTP
-| Python FastAPI Backend
-|    ↓
-| Raspberry Pi GPIO / MCP23017 / ADS1115
-|    ↓
-| Physical cockpit controls
-|
-| AI:
-|
-| Headset Microphone
-|    ↓
-| Python
-|    ↓
-| Whisper / Speech-to-Text
-|    ↓
-| Communication Checker
-|    ↓
-| React receives result here
-|
+|--------------------------------------------------------------------------
 */
 
+
 export const simulatorBridge = {
-  /**
-   * Later:
-   * const socket = new WebSocket("ws://localhost:8000/ws/hardware")
-   */
+
+  /* ========================================================================
+     HARDWARE WEBSOCKET
+     ======================================================================== */
+
   connectHardwareEvents(onEvent) {
-    console.log(
-      "Simulator bridge ready. Hardware connection not enabled yet."
-    );
+    let socket = null;
 
-    // LATER:
-    //
-    // const socket = new WebSocket(
-    //   "ws://localhost:8000/ws/hardware"
-    // );
-    //
-    // socket.onmessage = (event) => {
-    //   const data = JSON.parse(event.data);
-    //   onEvent(data);
-    // };
-    //
-    // return () => socket.close();
+    let reconnectTimer = null;
 
-    return () => {};
+    let manuallyClosed = false;
+
+
+    /* ----------------------------------------------------------------------
+       CREATE CONNECTION
+       ---------------------------------------------------------------------- */
+
+    const connect = () => {
+
+      /*
+       * Use the hostname from the browser automatically.
+       *
+       * Examples:
+       *
+       * If the frontend is opened using:
+       *
+       * http://tecnam-cockpit.local
+       *
+       * WebSocket becomes:
+       *
+       * ws://tecnam-cockpit.local:8001/ws/hardware
+       *
+       *
+       * If Chromium is running directly on the Raspberry Pi using:
+       *
+       * http://127.0.0.1
+       *
+       * WebSocket becomes:
+       *
+       * ws://127.0.0.1:8001/ws/hardware
+       */
+
+      const protocol =
+        window.location.protocol === "https:"
+          ? "wss"
+          : "ws";
+
+
+      const hostname =
+        window.location.hostname ||
+        "127.0.0.1";
+
+
+      const socketUrl =
+        `${protocol}://${hostname}:8001/ws/hardware`;
+
+
+      console.log(
+        "Connecting to physical cockpit:",
+        socketUrl
+      );
+
+
+      /* --------------------------------------------------------------------
+         OPEN WEBSOCKET
+         -------------------------------------------------------------------- */
+
+      socket =
+        new WebSocket(
+          socketUrl
+        );
+
+
+      /* --------------------------------------------------------------------
+         CONNECTED
+         -------------------------------------------------------------------- */
+
+      socket.onopen = () => {
+        console.log(
+          "✅ Physical cockpit connected"
+        );
+      };
+
+
+      /* --------------------------------------------------------------------
+         RECEIVE HARDWARE EVENT
+         -------------------------------------------------------------------- */
+
+      socket.onmessage = (event) => {
+        try {
+          const data =
+            JSON.parse(
+              event.data
+            );
+
+
+          console.log(
+            "Hardware event:",
+            data
+          );
+
+
+          /*
+           * hardware_bridge.py currently sends two main types:
+           *
+           *
+           * INITIAL SNAPSHOT
+           *
+           * {
+           *   type: "snapshot",
+           *   states: {
+           *     master_switch: "ON",
+           *     generator: "ON",
+           *     ...
+           *   }
+           * }
+           *
+           *
+           * LIVE CONTROL EVENT
+           *
+           * {
+           *   type: "control",
+           *   controlId: "master_switch",
+           *   value: "ON",
+           *   source: "gpio"
+           * }
+           *
+           *
+           * We do NOT process checklist logic here.
+           *
+           * SimulatorContext will decide what to do
+           * with the event.
+           */
+
+          if (
+            typeof onEvent ===
+            "function"
+          ) {
+            onEvent(
+              data
+            );
+          }
+
+        } catch (error) {
+
+          console.error(
+            "Invalid hardware WebSocket message:",
+            error
+          );
+
+        }
+      };
+
+
+      /* --------------------------------------------------------------------
+         ERROR
+         -------------------------------------------------------------------- */
+
+      socket.onerror = (error) => {
+        console.error(
+          "Hardware WebSocket error:",
+          error
+        );
+      };
+
+
+      /* --------------------------------------------------------------------
+         DISCONNECTED
+         -------------------------------------------------------------------- */
+
+      socket.onclose = () => {
+
+        console.log(
+          "⚠️ Physical cockpit disconnected"
+        );
+
+
+        socket = null;
+
+
+        /*
+         * Automatically reconnect every 2 seconds.
+         *
+         * This allows the frontend to recover if:
+         *
+         * - hardware_bridge.py restarts
+         * - Raspberry Pi service restarts
+         * - WebSocket temporarily disconnects
+         */
+
+        if (
+          !manuallyClosed
+        ) {
+
+          console.log(
+            "Attempting hardware reconnection..."
+          );
+
+
+          reconnectTimer =
+            window.setTimeout(
+              () => {
+                connect();
+              },
+              2000
+            );
+        }
+      };
+    };
+
+
+    /* ----------------------------------------------------------------------
+       START CONNECTION
+       ---------------------------------------------------------------------- */
+
+    connect();
+
+
+    /* ----------------------------------------------------------------------
+       CLEANUP FUNCTION
+       ----------------------------------------------------------------------
+       React calls this when the component/provider unmounts.
+       ---------------------------------------------------------------------- */
+
+    return () => {
+
+      manuallyClosed = true;
+
+
+      if (
+        reconnectTimer
+      ) {
+
+        window.clearTimeout(
+          reconnectTimer
+        );
+
+        reconnectTimer =
+          null;
+      }
+
+
+      if (
+        socket
+      ) {
+
+        /*
+         * Only close if the socket is not already closed.
+         */
+
+        if (
+          socket.readyState ===
+            WebSocket.OPEN ||
+          socket.readyState ===
+            WebSocket.CONNECTING
+        ) {
+
+          socket.close();
+
+        }
+
+
+        socket = null;
+      }
+    };
   },
 
-  /**
-   * Frontend simulator button.
-   *
-   * Later this could send a command to Python,
-   * or simply be removed when physical controls are used.
-   */
-  async sendControlCommand(payload) {
-    console.log("SIMULATED CONTROL:", payload);
+
+  /* ========================================================================
+     FRONTEND CONTROL COMMAND
+     ========================================================================
+     This is currently retained for older frontend/demo code.
+
+     Physical cockpit controls do NOT need to call this function.
+
+     Their events travel:
+
+     hardware_bridge.py
+            ↓
+     WebSocket
+            ↓
+     connectHardwareEvents()
+     ======================================================================== */
+
+  async sendControlCommand(
+    payload
+  ) {
+
+    console.log(
+      "SIMULATED CONTROL:",
+      payload
+    );
+
 
     return {
       success: true,
@@ -72,34 +329,43 @@ export const simulatorBridge = {
     };
   },
 
-  /**
-   * LATER:
-   * Replace with AI guidance endpoint.
-   *
-   * Example:
-   *
-   * POST http://localhost:8000/api/ai/guidance
-   */
-  async getAiGuidance(step) {
+
+  /* ========================================================================
+     AI GUIDANCE
+     ========================================================================
+     Placeholder for a future local AI guidance endpoint.
+     ======================================================================== */
+
+  async getAiGuidance(
+    step
+  ) {
+
     return {
-      message: `Complete the "${step.title}" step according to the checklist.`,
+      message:
+        `Complete the "${step.title}" step according to the checklist.`,
     };
   },
 
-  /**
-   * LATER:
-   * Audio/ATC transcription result will be passed here.
-   *
-   * Example response from Python:
-   *
-   * {
-   *   transcript: "Binalonan Radio RP-C1234...",
-   *   correct: true,
-   *   score: 95
-   * }
-   */
-  async evaluateCommunication(transcript) {
-    console.log("AI communication placeholder:", transcript);
+
+  /* ========================================================================
+     COMMUNICATION EVALUATION
+     ========================================================================
+     Placeholder for communication evaluation.
+
+     Your actual communication system can later connect this to the
+     local FastAPI / speech recognition / deterministic communication
+     validator.
+     ======================================================================== */
+
+  async evaluateCommunication(
+    transcript
+  ) {
+
+    console.log(
+      "AI communication placeholder:",
+      transcript
+    );
+
 
     return {
       correct: true,

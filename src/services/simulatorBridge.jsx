@@ -24,6 +24,22 @@
 |          ↓
 | Checklist / Grading / UI
 |
+| Guidance LED flow:
+|
+| Current Checklist Step
+|          ↓
+| ChecklistExecution
+|          ↓
+| simulatorBridge
+|          ↓
+| WebSocket :8001/ws/hardware
+|          ↓
+| backend/hardware_bridge.py
+|          ↓
+| PCA9555 #2
+|          ↓
+| Guidance LED
+|
 |--------------------------------------------------------------------------
 */
 
@@ -34,7 +50,10 @@ export const simulatorBridge = {
      HARDWARE WEBSOCKET
      ======================================================================== */
 
-  connectHardwareEvents(onEvent) {
+  connectHardwareEvents(
+    onEvent,
+    guidanceControlId = undefined
+  ) {
     let socket = null;
 
     let reconnectTimer = null;
@@ -110,6 +129,50 @@ export const simulatorBridge = {
         console.log(
           "✅ Physical cockpit connected"
         );
+
+
+        /*
+         * GUIDANCE LED
+         *
+         * undefined:
+         * This WebSocket connection does not control
+         * the guidance LEDs.
+         *
+         * null:
+         * Turn all guidance LEDs OFF.
+         *
+         * string:
+         * Turn the requested guidance LED ON.
+         *
+         * Examples:
+         *
+         * "master_switch"
+         * "fuel_pump"
+         * "ignition"
+         * "choke"
+         * "carb_heat"
+         */
+
+        if (
+          guidanceControlId !==
+          undefined
+        ) {
+
+          socket.send(
+            JSON.stringify({
+              type: "guidance",
+
+              controlId:
+                guidanceControlId,
+            })
+          );
+
+
+          console.log(
+            "Guidance LED request:",
+            guidanceControlId
+          );
+        }
       };
 
 
@@ -132,7 +195,7 @@ export const simulatorBridge = {
 
 
           /*
-           * hardware_bridge.py currently sends two main types:
+           * hardware_bridge.py sends:
            *
            *
            * INITIAL SNAPSHOT
@@ -157,16 +220,25 @@ export const simulatorBridge = {
            * }
            *
            *
-           * We do NOT process checklist logic here.
+           * GUIDANCE ACKNOWLEDGEMENT
            *
-           * SimulatorContext will decide what to do
-           * with the event.
+           * {
+           *   type: "guidance_ack",
+           *   controlId: "master_switch"
+           * }
+           *
+           *
+           * We do NOT perform checklist grading here.
+           *
+           * SimulatorContext / ChecklistExecution
+           * decides what to do with received events.
            */
 
           if (
             typeof onEvent ===
             "function"
           ) {
+
             onEvent(
               data
             );
@@ -188,10 +260,12 @@ export const simulatorBridge = {
          -------------------------------------------------------------------- */
 
       socket.onerror = (error) => {
+
         console.error(
           "Hardware WebSocket error:",
           error
         );
+
       };
 
 
@@ -231,7 +305,9 @@ export const simulatorBridge = {
           reconnectTimer =
             window.setTimeout(
               () => {
+
                 connect();
+
               },
               2000
             );
@@ -251,6 +327,9 @@ export const simulatorBridge = {
        CLEANUP FUNCTION
        ----------------------------------------------------------------------
        React calls this when the component/provider unmounts.
+
+       If this connection controls checklist guidance,
+       turn all guidance LEDs OFF before closing.
        ---------------------------------------------------------------------- */
 
     return () => {
@@ -266,6 +345,7 @@ export const simulatorBridge = {
           reconnectTimer
         );
 
+
         reconnectTimer =
           null;
       }
@@ -276,7 +356,43 @@ export const simulatorBridge = {
       ) {
 
         /*
-         * Only close if the socket is not already closed.
+         * Turn guidance OFF before closing this
+         * checklist guidance connection.
+         *
+         * Connections where guidanceControlId is
+         * undefined do NOT affect the LEDs.
+         */
+
+        if (
+          guidanceControlId !==
+            undefined &&
+          socket.readyState ===
+            WebSocket.OPEN
+        ) {
+
+          try {
+
+            socket.send(
+              JSON.stringify({
+                type: "guidance",
+                controlId: null,
+              })
+            );
+
+          } catch (error) {
+
+            console.error(
+              "Unable to turn guidance LEDs off:",
+              error
+            );
+
+          }
+        }
+
+
+        /*
+         * Only close if the socket is not
+         * already closed.
          */
 
         if (

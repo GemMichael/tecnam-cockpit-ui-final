@@ -1,9 +1,8 @@
 import {
   Bell,
-  Mic2,
   Monitor,
+  Power,
   Save,
-  Volume2,
 } from "lucide-react";
 
 import { useState } from "react";
@@ -25,19 +24,18 @@ function Toggle({
 }) {
   return (
     <button
+      type="button"
       onClick={() => onChange(!enabled)}
-      className={`h-7 w-12 rounded-full p-1 transition ${
-        enabled
+      className={`h-7 w-12 rounded-full p-1 transition ${enabled
           ? "bg-blue-600"
           : "bg-slate-300"
-      }`}
+        }`}
     >
       <div
-        className={`h-5 w-5 rounded-full bg-white shadow transition ${
-          enabled
+        className={`h-5 w-5 rounded-full bg-white shadow transition ${enabled
             ? "translate-x-5"
             : ""
-        }`}
+          }`}
       />
     </button>
   );
@@ -59,6 +57,16 @@ function Settings() {
   const [saved, setSaved] =
     useState(false);
 
+  const [
+    shuttingDown,
+    setShuttingDown,
+  ] = useState(false);
+
+  const [
+    shutdownError,
+    setShutdownError,
+  ] = useState("");
+
   const updateSetting = (
     key,
     value
@@ -78,6 +86,45 @@ function Settings() {
     );
 
     setSaved(true);
+  };
+
+  const shutdownSystem = async () => {
+    const confirmed = window.confirm(
+      "Shut down the cockpit system?\n\nThe Raspberry Pi will safely power off."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setShuttingDown(true);
+    setShutdownError("");
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/system/poweroff",
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Shutdown request failed."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "System shutdown failed:",
+        error
+      );
+
+      setShutdownError(
+        "Unable to shut down the system."
+      );
+
+      setShuttingDown(false);
+    }
   };
 
   const items = [
@@ -151,9 +198,8 @@ function Settings() {
         </h2>
 
         <p className="mt-2 text-sm text-slate-500">
-          These options will become functional when
-          Python and the Raspberry Pi hardware
-          service are connected.
+          Raspberry Pi cockpit services used by
+          the training system.
         </p>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -183,8 +229,50 @@ function Settings() {
         </div>
       </GlassCard>
 
+      <GlassCard className="mt-6 border border-red-100 p-6">
+        <div className="flex items-center justify-between gap-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <Power
+                size={20}
+                className="text-red-600"
+              />
+
+              <h2 className="font-bold text-slate-900">
+                System Power
+              </h2>
+            </div>
+
+            <p className="mt-2 text-sm text-slate-500">
+              Safely shut down the Raspberry Pi
+              before disconnecting cockpit power.
+            </p>
+
+            {shutdownError && (
+              <p className="mt-2 text-sm font-semibold text-red-600">
+                {shutdownError}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={shutdownSystem}
+            disabled={shuttingDown}
+            className="flex shrink-0 items-center gap-2 rounded-2xl bg-red-600 px-5 py-3 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Power size={18} />
+
+            {shuttingDown
+              ? "Shutting Down..."
+              : "Shut Down System"}
+          </button>
+        </div>
+      </GlassCard>
+
       <div className="mt-6 flex items-center gap-4">
         <button
+          type="button"
           onClick={save}
           className="flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-3.5 font-semibold text-white"
         >

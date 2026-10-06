@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 
 import {
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -13,13 +14,16 @@ import {
   transcribeAudio,
 } from "../services/speechToText";
 
+import {
+  simulatorBridge,
+} from "../services/simulatorBridge";
+
 
 function PushToTalkButton({
   onTranscript,
   prompt = "",
   disabled = false,
 }) {
-
   const recorderRef =
     useRef(null);
 
@@ -31,6 +35,17 @@ function PushToTalkButton({
 
   const releaseRequestedRef =
     useRef(false);
+
+  /*
+   * These refs allow the hardware WebSocket listener
+   * to always use the latest versions of the recording
+   * functions without reconnecting on every render.
+   */
+  const startRecordingRef =
+    useRef(null);
+
+  const stopRecordingRef =
+    useRef(null);
 
 
   const [
@@ -50,11 +65,9 @@ function PushToTalkButton({
      ========================================================== */
 
   function stopMicrophoneStream() {
-
     if (
       streamRef.current
     ) {
-
       streamRef.current
         .getTracks()
         .forEach(
@@ -73,7 +86,6 @@ function PushToTalkButton({
      ========================================================== */
 
   function getSupportedMimeType() {
-
     const types = [
       "audio/webm;codecs=opus",
       "audio/webm",
@@ -86,14 +98,12 @@ function PushToTalkButton({
       const type
       of types
     ) {
-
       if (
         MediaRecorder
           .isTypeSupported(
             type
           )
       ) {
-
         return type;
       }
     }
@@ -108,9 +118,8 @@ function PushToTalkButton({
      ========================================================== */
 
   async function startRecording(
-    event
+    event = null
   ) {
-
     if (
       disabled ||
       status ===
@@ -122,15 +131,31 @@ function PushToTalkButton({
     }
 
 
-    event.preventDefault();
+    /*
+     * Touchscreen PTT provides a pointer event.
+     * Physical GPIO PTT does not.
+     *
+     * Because of this, the event is optional.
+     */
+    if (
+      event?.preventDefault
+    ) {
+      event.preventDefault();
+    }
 
 
     try {
-
-      event.currentTarget
-        .setPointerCapture(
-          event.pointerId
-        );
+      if (
+        event?.currentTarget
+          ?.setPointerCapture &&
+        event?.pointerId !==
+          undefined
+      ) {
+        event.currentTarget
+          .setPointerCapture(
+            event.pointerId
+          );
+      }
 
     } catch {
       // Pointer capture is optional.
@@ -145,7 +170,6 @@ function PushToTalkButton({
 
 
     try {
-
       /* ======================================================
          ASK FOR MICROPHONE ACCESS
          ====================================================== */
@@ -202,7 +226,6 @@ function PushToTalkButton({
 
       recorder.ondataavailable =
         (recordingEvent) => {
-
           if (
             recordingEvent
               .data &&
@@ -210,7 +233,6 @@ function PushToTalkButton({
               .data.size >
               0
           ) {
-
             chunksRef.current.push(
               recordingEvent
                 .data
@@ -225,7 +247,6 @@ function PushToTalkButton({
 
       recorder.onstop =
         async () => {
-
           stopMicrophoneStream();
 
 
@@ -253,7 +274,6 @@ function PushToTalkButton({
             audioBlob.size <
             500
           ) {
-
             setStatus(
               "idle"
             );
@@ -276,7 +296,6 @@ function PushToTalkButton({
 
 
           try {
-
             const text =
               await transcribeAudio(
                 audioBlob,
@@ -289,7 +308,6 @@ function PushToTalkButton({
             if (
               onTranscript
             ) {
-
               onTranscript(
                 text
               );
@@ -303,7 +321,6 @@ function PushToTalkButton({
           } catch (
             transcriptionError
           ) {
-
             console.error(
               transcriptionError
             );
@@ -336,18 +353,17 @@ function PushToTalkButton({
 
 
       /*
-        This handles the first microphone-permission request.
-
-        If the user released PTT while Chrome was showing the
-        microphone permission dialog, immediately stop once
-        permission has been granted.
-      */
+       * This handles the first microphone-permission request.
+       *
+       * If the user released PTT while Chrome was showing the
+       * microphone permission dialog, immediately stop once
+       * permission has been granted.
+       */
 
       if (
         releaseRequestedRef
           .current
       ) {
-
         setTimeout(
           () =>
             stopRecording(),
@@ -358,7 +374,6 @@ function PushToTalkButton({
     } catch (
       microphoneError
     ) {
-
       console.error(
         microphoneError
       );
@@ -377,13 +392,11 @@ function PushToTalkButton({
           .name ===
         "NotAllowedError"
       ) {
-
         setError(
           "Microphone permission was denied."
         );
 
       } else {
-
         setError(
           "Unable to access the microphone."
         );
@@ -396,45 +409,119 @@ function PushToTalkButton({
      STOP PTT
      ========================================================== */
 
-function stopRecording() {
-
-  releaseRequestedRef.current =
-    true;
-
-
-  const recorder =
-    recorderRef.current;
+  function stopRecording() {
+    releaseRequestedRef.current =
+      true;
 
 
-  if (
-    recorder &&
-    recorder.state ===
-      "recording"
-  ) {
+    const recorder =
+      recorderRef.current;
 
-    /*
-      Keep recording for a very short
-      moment after PTT release.
 
-      This prevents the final word or
-      callsign from being clipped.
-    */
-
-    setTimeout(() => {
-
-      if (
-        recorder.state ===
+    if (
+      recorder &&
+      recorder.state ===
         "recording"
-      ) {
+    ) {
+      /*
+       * Keep recording for a very short
+       * moment after PTT release.
+       *
+       * This prevents the final word or
+       * callsign from being clipped.
+       */
 
-        recorder.stop();
-
-      }
-
-    }, 250);
-
+      setTimeout(() => {
+        if (
+          recorder.state ===
+            "recording"
+        ) {
+          recorder.stop();
+        }
+      }, 250);
+    }
   }
-}
+
+
+  /* ==========================================================
+     KEEP LATEST RECORDING FUNCTIONS
+     ========================================================== */
+
+  useEffect(() => {
+    startRecordingRef.current =
+      startRecording;
+
+    stopRecordingRef.current =
+      stopRecording;
+  });
+
+
+  /* ==========================================================
+     PHYSICAL RASPBERRY PI PTT
+     ========================================================== */
+
+  useEffect(() => {
+    const disconnect =
+      simulatorBridge
+        .connectHardwareEvents(
+          (message) => {
+            /*
+             * Ignore snapshots, normal cockpit controls,
+             * guidance acknowledgements and anything that
+             * isn't the physical GPIO PTT.
+             */
+            if (
+              message?.type !==
+                "ptt" ||
+              message?.source !==
+                "gpio"
+            ) {
+              return;
+            }
+
+
+            /*
+             * GPIO17:
+             *
+             * Released = LOW
+             * Pressed  = HIGH
+             *
+             * hardware_bridge.py converts that into:
+             *
+             * {
+             *   type: "ptt",
+             *   pressed: true / false,
+             *   source: "gpio"
+             * }
+             */
+
+            if (
+              message.pressed
+            ) {
+              console.log(
+                "Physical PTT: PRESSED"
+              );
+
+              startRecordingRef
+                .current?.();
+
+              return;
+            }
+
+
+            console.log(
+              "Physical PTT: RELEASED"
+            );
+
+            stopRecordingRef
+              .current?.();
+          }
+        );
+
+
+    return disconnect;
+
+  }, []);
 
 
   /* ==========================================================
@@ -455,7 +542,7 @@ function stopRecording() {
 
   if (
     status ===
-    "transcribing"
+      "transcribing"
   ) {
     buttonText =
       "Transcribing...";
@@ -468,7 +555,6 @@ function stopRecording() {
 
   return (
     <div className="space-y-2">
-
       <button
         type="button"
 
@@ -548,10 +634,8 @@ function stopRecording() {
           disabled:opacity-50
         `}
       >
-
         {status ===
         "recording" ? (
-
           <Radio
             size={20}
             className="animate-pulse"
@@ -559,66 +643,47 @@ function stopRecording() {
 
         ) : status ===
           "transcribing" ? (
-
           <LoaderCircle
             size={20}
             className="animate-spin"
           />
 
         ) : (
-
           <Mic
             size={20}
           />
-
         )}
 
 
         {buttonText}
-
       </button>
 
 
       {status ===
         "recording" && (
-
         <p className="text-center text-[10px] font-bold uppercase tracking-wider text-red-600">
-
           ● PTT ACTIVE —
           SPEAK NOW
-
         </p>
-
       )}
 
 
       {status ===
         "transcribing" && (
-
         <p className="text-center text-[10px] font-semibold text-blue-600">
-
           Processing local
           speech recognition...
-
         </p>
-
       )}
 
 
       {error && (
-
         <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2">
-
           <p className="text-xs text-red-600">
-
             {error}
-
           </p>
-
         </div>
-
       )}
-
     </div>
   );
 }

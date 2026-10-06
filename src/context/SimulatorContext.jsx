@@ -52,6 +52,8 @@ import {
 
     finishTrainingSession,
 
+    getTrainingAssessmentSnapshot,
+
     recordChecklistControlInput,
 
     recordChecklistStepCompletion,
@@ -985,11 +987,42 @@ export function SimulatorProvider({
                         .steps
                         .length
                 ) {
-                    setFeedback(
-                        `${currentChecklist.title} checklist complete.`
-                    );
+                    const assessment =
+                        getTrainingAssessmentSnapshot();
 
-                    finishTrainingSession();
+                    const checklistCompletion =
+                        assessment?.summary
+                            ?.checklist
+                            ?.completion;
+
+                    const communications =
+                        assessment?.summary
+                            ?.communications;
+
+                    const allChecklistStepsComplete =
+                        checklistCompletion?.totalSteps > 0 &&
+                        checklistCompletion.completed >=
+                        checklistCompletion.totalSteps;
+
+                    const allCommunicationsComplete =
+                        !communications?.totalStages ||
+                        communications.completedStages >=
+                        communications.totalStages;
+
+                    if (
+                        allChecklistStepsComplete &&
+                        allCommunicationsComplete
+                    ) {
+                        setFeedback(
+                            "All checklists complete. Training session completed."
+                        );
+
+                        finishTrainingSession();
+                    } else {
+                        setFeedback(
+                            `${currentChecklist.title} checklist complete. Continue with the remaining checklists.`
+                        );
+                    }
                 }
 
 

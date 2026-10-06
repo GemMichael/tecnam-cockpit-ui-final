@@ -50,6 +50,8 @@ import {
 
 import {
 
+    finishTrainingSession,
+
     recordChecklistControlInput,
 
     recordChecklistStepCompletion,
@@ -978,23 +980,16 @@ export function SimulatorProvider({
 
 
                 if (
-
                     nextIndex >=
-
                     currentChecklist
-
                         .steps
-
                         .length
-
                 ) {
-
                     setFeedback(
-
                         `${currentChecklist.title} checklist complete.`
-
                     );
 
+                    finishTrainingSession();
                 }
 
 
@@ -2008,7 +2003,7 @@ export function SimulatorProvider({
                             if (
                                 !hardwareEvent ||
                                 typeof hardwareEvent !==
-                                    "object"
+                                "object"
                             ) {
                                 return;
                             }
@@ -2020,10 +2015,10 @@ export function SimulatorProvider({
 
                             if (
                                 hardwareEvent.type ===
-                                    "snapshot" &&
+                                "snapshot" &&
                                 hardwareEvent.states &&
                                 typeof hardwareEvent.states ===
-                                    "object"
+                                "object"
                             ) {
                                 console.log(
                                     "Synchronizing physical cockpit:",
@@ -2079,7 +2074,7 @@ export function SimulatorProvider({
 
                             if (
                                 hardwareEvent.type ===
-                                    "control"
+                                "control"
                             ) {
                                 const {
                                     controlId,
@@ -2091,9 +2086,9 @@ export function SimulatorProvider({
                                 if (
                                     !controlId ||
                                     value ===
-                                        undefined ||
+                                    undefined ||
                                     value ===
-                                        null
+                                    null
                                 ) {
                                     return;
                                 }

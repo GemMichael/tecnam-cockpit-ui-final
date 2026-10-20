@@ -1750,13 +1750,28 @@ function hasEngineStartRequest(
 function hasMayStartUp(
   text
 ) {
-  return (
-    hasPermissionWord(
-      text
-    ) &&
+  const normalized =
+    normalizeText(text);
 
+  const hasApproved =
+    normalized.includes(
+      "approved"
+    ) ||
+    hasApproxWord(
+      text,
+      "approved",
+      1
+    );
+
+  return (
     hasStartConcept(
       text
+    ) &&
+    (
+      hasPermissionWord(
+        text
+      ) ||
+      hasApproved
     )
   );
 }
@@ -2635,6 +2650,9 @@ function hasLineUpRequest(
 
     "request to lying up",
     "reques to lying up",
+    "ready to line up",
+    "ready line up",
+    "ready for line up",
   ];
 
 
@@ -2789,6 +2807,95 @@ function hasMayLineUp(
     ) &&
     hasLineUpConcept(
       text
+    )
+  );
+}
+
+function hasTaxiBackToRamp(
+  text
+) {
+  const normalized =
+    normalizeText(text);
+
+  const hasBack =
+    normalized.includes(
+      "back"
+    );
+
+  const hasRamp =
+    hasApproxWord(
+      text,
+      "ramp",
+      1
+    );
+
+  return (
+    hasTaxiWord(text) &&
+    hasBack &&
+    hasRamp
+  );
+}
+
+
+function hasClearedOrVacatedActive(
+  text
+) {
+  const normalized =
+    normalizeText(text);
+
+  const hasActive =
+    normalized.includes(
+      "active"
+    );
+
+  const hasVacated =
+    normalized.includes(
+      "vacated"
+    ) ||
+    hasApproxWord(
+      text,
+      "vacated",
+      1
+    );
+
+  const hasCleared =
+    normalized.includes(
+      "cleared"
+    ) ||
+    hasApproxWord(
+      text,
+      "cleared",
+      1
+    );
+
+  return (
+    hasActive &&
+    (
+      hasVacated ||
+      hasCleared
+    )
+  );
+}
+
+
+function hasShutdownOrTermination(
+  text
+) {
+  const normalized =
+    normalizeText(text);
+
+  return (
+    normalized.includes(
+      "terminating flight plan"
+    ) ||
+    normalized.includes(
+      "terminate flight plan"
+    ) ||
+    normalized.includes(
+      "engine shutdown"
+    ) ||
+    normalized.includes(
+      "shutdown"
     )
   );
 }
@@ -3439,6 +3546,131 @@ export const commsScenarios = {
                 ),
             },
 
+
+            {
+              label:
+                "Callsign RP-C1234",
+
+              correct:
+                hasCallsign(
+                  text
+                ),
+            },
+
+          ];
+        },
+      },
+
+    ],
+  },
+
+  "taxi-back-ramp": {
+    id:
+      "taxi-back-ramp",
+
+    title:
+      "Taxi Back to Ramp",
+
+    station:
+      "Binalonan Radio",
+
+    stages: [
+
+      {
+        id:
+          "taxi-back-ramp-request",
+
+        title:
+          "Taxi Back to Ramp Request",
+
+        prompt:
+          "Report clear of the active and request taxi back to the ramp.",
+
+        atcResponse:
+          "RP-C1234, Binalonan Radio, taxi back to ramp, thank you and good day.",
+
+        evaluate(text) {
+          return [
+
+            {
+              label:
+                "Binalonan Radio",
+
+              correct:
+                hasBinalonanRadio(
+                  text
+                ),
+            },
+
+            {
+              label:
+                "Callsign RP-C1234",
+
+              correct:
+                hasCallsign(
+                  text
+                ),
+            },
+
+            {
+              label:
+                "Cleared/Vacated Active",
+
+              correct:
+                hasClearedOrVacatedActive(
+                  text
+                ),
+            },
+
+            {
+              label:
+                "Taxi Back to Ramp",
+
+              correct:
+                hasTaxiBackToRamp(
+                  text
+                ),
+            },
+
+            {
+              label:
+                "Terminate / Engine Shutdown",
+
+              correct:
+                hasShutdownOrTermination(
+                  text
+                ),
+            },
+
+          ];
+        },
+      },
+
+      {
+        id:
+          "taxi-back-ramp-readback",
+
+        title:
+          "Taxi Back to Ramp Readback",
+
+        prompt:
+          "Read back the taxi-back-to-ramp instruction.",
+
+        atcResponse:
+          null,
+
+        evaluate(text) {
+          return [
+
+            {
+              label:
+                "Taxi Back to Ramp",
+
+              correct:
+                hasTaxiBackToRamp(
+                  text
+                ),
+            },
 
             {
               label:

@@ -940,23 +940,42 @@ export const checklists = [
           "Ignition Switch",
 
         instruction:
-          "Turn the ignition switch through LEFT, RIGHT, BOTH, then START.",
+          "Select RIGHT, LEFT, then BOTH, then select START.",
 
         controlId:
           "ignition",
 
         sequence: [
-          "LEFT",
           "RIGHT",
+          "LEFT",
           "BOTH",
           "START",
         ],
 
         expectedLabel:
-          "LEFT → RIGHT → BOTH → START",
+          "RIGHT → LEFT → BOTH → START",
 
         note:
-          "The checklist indicates engine startup sound after this step.",
+          "Latest checklist: select RIGHT, LEFT, BOTH, then START.",
+      }),
+
+      controlStep({
+        id: "es-18",
+
+        title:
+          "Propeller / Throttle",
+
+        instruction:
+          "Push the throttle to 1,000–1,200 RPM after engine start.",
+
+        controlId:
+          "throttle",
+
+        expected:
+          "1000_1200",
+
+        expectedLabel:
+          "Throttle 1,000–1,200 RPM",
       }),
 
       // -------------------------------------------------------
@@ -1010,20 +1029,23 @@ export const checklists = [
       // -------------------------------------------------------
       // SOURCE CHOKE/CHOCK WORDING
       // -------------------------------------------------------
-      manualStep({
+      controlStep({
         id: "es-13",
 
         title:
-          "Choke Off / Tire Procedure",
+          "Choke",
 
         instruction:
-          "Signal the AMT according to the checklist procedure to take off the 'chokes' from the tire.",
+          "Set the choke lever OFF.",
 
-        actionLabel:
-          "Confirm Procedure Complete",
+        controlId:
+          "choke",
 
-        note:
-          "The supplied checklist labels this row 'Choke Off' but its procedure refers to the tire. This wording is preserved instead of assigning it to the engine choke switch.",
+        expected:
+          "OFF",
+
+        expectedLabel:
+          "Choke OFF",
       }),
 
       // -------------------------------------------------------
@@ -1128,26 +1150,6 @@ export const checklists = [
 
 
 
-      // -------------------------------------------------------
-      // 1000-1200 RPM
-      // -------------------------------------------------------
-      controlStep({
-        id: "es-18",
-
-        title: "Throttle",
-
-        instruction:
-          "Set the throttle between 1,000 and 1,200 RPM.",
-
-        controlId:
-          "throttle",
-
-        expected:
-          "1000_1200",
-
-        expectedLabel:
-          "1000–1200 RPM",
-      }),
 
       // -------------------------------------------------------
       // FUEL PUMP OFF
@@ -1824,15 +1826,16 @@ export const checklists = [
           "Throttle Full",
 
         instruction:
-          "Apply full power.",
+          "Push the throttle to maximum RPM and check static RPM.",
 
         controlId:
           "throttle",
 
-        expected: "FULL",
+        expected:
+          "FULL",
 
         expectedLabel:
-          "Full Power",
+          "Full Power / Static RPM 2,100",
       }),
 
       // -------------------------------------------------------
@@ -1842,18 +1845,14 @@ export const checklists = [
         id: "ru-13",
 
         title:
-          "Engine Instruments",
+          "Static RPM",
 
         instruction:
-          "Check engine instruments and suction gauge. Confirm that they are on green.",
+          "Check that static RPM at full power is approximately 2,100 RPM.",
 
         actionLabel:
-          "Confirm Instruments Green",
-
-        note:
-          "The supplied checklist leaves the static RPM value blank.",
+          "Confirm Static RPM 2,100",
       }),
-
       // -------------------------------------------------------
       // IDLE
       // -------------------------------------------------------
@@ -1897,18 +1896,20 @@ export const checklists = [
       controlStep({
         id: "ru-16",
 
-        title: "Throttle",
+        title:
+          "Throttle",
 
         instruction:
-          "Set power back to 1,000 RPM.",
+          "Set power back to 1,000–1,200 RPM.",
 
         controlId:
           "throttle",
 
-        expected: "1000",
+        expected:
+          "1000_1200",
 
         expectedLabel:
-          "Power Back to 1,000 RPM",
+          "Power Back to 1,000–1,200 RPM",
       }),
 
       // -------------------------------------------------------
@@ -2201,6 +2202,25 @@ export const checklists = [
       // REPORT / LINE-UP COMMUNICATION
       // The checklist says brakes are released after reporting.
       // -------------------------------------------------------
+      controlStep({
+        id: "bto-12",
+
+        title:
+          "Parking Brakes",
+
+        instruction:
+          "Release the parking brakes.",
+
+        controlId:
+          "parking_brake",
+
+        expected:
+          "RELEASED",
+
+        expectedLabel:
+          "Parking Brakes Released",
+      }),
+
       commsStep({
         id: "bto-11",
 
@@ -2214,33 +2234,13 @@ export const checklists = [
           "line-up",
       }),
 
-      // -------------------------------------------------------
-      // RELEASE BRAKES AFTER REPORTING
-      // -------------------------------------------------------
-      controlStep({
-        id: "bto-12",
-
-        title:
-          "Parking Brakes",
-
-        instruction:
-          "Release the parking brakes after reporting.",
-
-        controlId:
-          "parking_brake",
-
-        expected:
-          "RELEASED",
-
-        expectedLabel:
-          "Parking Brakes Released",
-      }),
     ],
   },
 
   // ===========================================================
   // 6. AFTER LANDING
   // ===========================================================
+
   {
     id: "after-landing",
 
@@ -2316,15 +2316,16 @@ export const checklists = [
           "Landing Light",
 
         instruction:
-          "Set the landing light ON.",
+          "Turn the landing light OFF.",
 
         controlId:
           "landing_light",
 
-        expected: "ON",
+        expected:
+          "OFF",
 
         expectedLabel:
-          "Landing Light ON",
+          "Landing Light OFF",
       }),
 
       // -------------------------------------------------------
@@ -2361,11 +2362,26 @@ export const checklists = [
         controlId:
           "fuel_pump",
 
-        expected: "OFF",
+        expected:
+          "OFF",
 
         expectedLabel:
           "Electric Fuel Pump OFF",
       }),
+
+      commsStep({
+        id: "al-5",
+
+        title:
+          "Taxi Back to Ramp Communication",
+
+        instruction:
+          "Complete the Binalonan Radio taxi-back-to-ramp communication procedure.",
+
+        scenario:
+          "taxi-back-ramp",
+      }),
+
     ],
   },
 
@@ -2421,16 +2437,16 @@ export const checklists = [
           "Engine RPM",
 
         instruction:
-          "Keep the engine running at 1,000 to 1,200 RPM.",
+          "Set the engine to 1,000 RPM.",
 
         controlId:
           "throttle",
 
         expected:
-          "1000_1200",
+          "1000",
 
         expectedLabel:
-          "1000–1200 RPM",
+          "1,000 RPM",
       }),
 
       // -------------------------------------------------------
@@ -2443,21 +2459,22 @@ export const checklists = [
           "One Minute Cool Down",
 
         instruction:
-          "Maintain 1,000 to 1,200 RPM continuously for one minute.",
+          "Maintain 1,000 RPM continuously for one minute to reduce latent heat.",
 
-        durationSeconds: 60,
+        durationSeconds:
+          60,
 
         requiredControlId:
           "throttle",
 
         requiredValue:
-          "1000_1200",
+          "1000",
 
         requiredLabel:
-          "1,000–1,200 RPM",
+          "1,000 RPM",
 
         note:
-          "The timer resets if the required RPM condition is not maintained.",
+          "The timer resets if 1,000 RPM is not maintained.",
       }),
 
       // -------------------------------------------------------
@@ -2481,27 +2498,6 @@ export const checklists = [
       }),
 
       // -------------------------------------------------------
-      // RADIO OFF
-      // -------------------------------------------------------
-      controlStep({
-        id: "sd-5",
-
-        title:
-          "All Radio",
-
-        instruction:
-          "Turn the radio OFF.",
-
-        controlId:
-          "radio",
-
-        expected: "OFF",
-
-        expectedLabel:
-          "Radio OFF",
-      }),
-
-      // -------------------------------------------------------
       // INTERCOM
       // -------------------------------------------------------
       controlStep({
@@ -2522,24 +2518,24 @@ export const checklists = [
       }),
 
       // -------------------------------------------------------
-      // AVIONICS
+      // RADIO OFF
       // -------------------------------------------------------
       controlStep({
-        id: "sd-7",
+        id: "sd-5",
 
         title:
-          "Avionic Master",
+          "All Radio",
 
         instruction:
-          "Turn the Avionic Master OFF.",
+          "Turn the radio OFF.",
 
         controlId:
-          "avionics_master",
+          "radio",
 
         expected: "OFF",
 
         expectedLabel:
-          "Avionic Master OFF",
+          "Radio OFF",
       }),
 
       // -------------------------------------------------------
@@ -2581,6 +2577,33 @@ export const checklists = [
         expectedLabel:
           "GPS OFF",
       }),
+
+
+
+      // -------------------------------------------------------
+      // AVIONICS
+      // -------------------------------------------------------
+      controlStep({
+        id: "sd-7",
+
+        title:
+          "Avionic Master",
+
+        instruction:
+          "Turn the Avionic Master OFF.",
+
+        controlId:
+          "avionics_master",
+
+        expected: "OFF",
+
+        expectedLabel:
+          "Avionic Master OFF",
+      }),
+
+
+
+
 
       // -------------------------------------------------------
       // IGNITION SHUTDOWN
@@ -2677,14 +2700,27 @@ export const checklists = [
 
         expectedLabel:
           "Electric Fuel Pump OFF",
-
-        note:
-          "The revised Engine Securing checklist says to change the Generator step to Electric Fuel Pump OFF.",
       }),
 
-      // -------------------------------------------------------
-      // MASTER
-      // -------------------------------------------------------
+      controlStep({
+        id: "sd-13a",
+
+        title:
+          "Generator",
+
+        instruction:
+          "Turn the Generator switch OFF.",
+
+        controlId:
+          "generator",
+
+        expected:
+          "OFF",
+
+        expectedLabel:
+          "Generator OFF",
+      }),
+
       controlStep({
         id: "sd-14",
 
@@ -2697,11 +2733,13 @@ export const checklists = [
         controlId:
           "master_switch",
 
-        expected: "OFF",
+        expected:
+          "OFF",
 
         expectedLabel:
           "Master Switch OFF",
       }),
+
 
       // -------------------------------------------------------
       // FUEL SELECTOR

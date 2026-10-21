@@ -27,6 +27,7 @@ const manualStep = ({
   instruction,
   actionLabel = "Confirm Check",
   note,
+  briefingText,
 }) => ({
   id,
   type: "manual",
@@ -34,6 +35,7 @@ const manualStep = ({
   instruction,
   actionLabel,
   note,
+  briefingText,
 });
 
 const instrumentStep = ({
@@ -288,21 +290,38 @@ export const checklists = [
       // PRELIMINARY CREW BRIEFING
       // -------------------------------------------------------
 
-      manualStep({
-        id: "ci-5a",
+manualStep({
+  id: "ci-5a",
 
-        title:
-          "Preliminary Crew Briefing",
+  title:
+    "Preliminary Crew Briefing",
 
-        instruction:
-          "Recite the Preliminary Crew Briefing.",
+  instruction:
+    "Recite the Preliminary Crew Briefing below.",
 
-        actionLabel:
-          "Confirm Briefing Obtained",
+  actionLabel:
+    "Confirm Briefing Obtained",
 
-        note:
-          "Added in the revised checklist.",
-      }),
+  briefingText: `Abort Plan of Take-off Briefing
+
+This will be flaps take-off configuration normal, take-off from runway 17, cockpit silence shall be observed except for take-off callout 40, 50, and rotate at 60kts.
+
+If engine malfunction occurs before rotate and at your command stop, I will close the throttle and stop the aircraft, no actions shall be done until the aircraft has come to a complete stop and parking brakes are set.
+
+If ate complete stop; magnetos off, fuel selector valve off, fuel pump off, generator, and master switch off.
+
+If engine malfunction occurs after rotate, I will keep speed above stall and proceed to an emergency landing airspeed above 50kts, best place to land, field on the right, flaps as needed, throttle idle, magnetos off, fuel selector valve off, fuel pump off, generator off, master switch standby.
+
+Abort Plan of Take-off Briefing
+
+If engine malfunction occurs at or above 400ft indicated, I will keep speed 70kts and attempt to restart. Fuel pump on, change fuel feeding tank, magnetos both to start, throttle lever as needed.
+
+If unsuccessful, proceed to an emergency landing. Flaps up, airspeed 70kts, place to land, fuel selector valve off, fuel pump off, magnetos off, generator off, master switch standby.
+
+Positive transfer of controls shall be done with a command of my controls and a response of your controls.
+
+If you have anything further to add captain, this concludes my preliminary crew briefing.`,
+}),
 
       // -------------------------------------------------------
       // MASTER

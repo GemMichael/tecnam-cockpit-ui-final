@@ -3359,6 +3359,29 @@ function evaluateTransmission(
   }
 
 
+  function bypassCommunication() {
+  stopAtcSpeech();
+
+  setIsAtcSpeaking(false);
+
+  scenario.stages.forEach((stage) => {
+    recordCommsAttempt({
+      scenarioId,
+      stageId: stage.id,
+      stageTitle: stage.title,
+      transcript: "[Communication bypassed by instructor]",
+      checks: [],
+      mode: "bypass",
+      targetLabel: null,
+      stageComplete: true,
+      clarification: null,
+    });
+  });
+
+  onComplete();
+}
+
+
 
 
 

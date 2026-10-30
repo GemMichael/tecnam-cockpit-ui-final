@@ -3502,6 +3502,17 @@ function evaluateTransmission(
             )}
 
 
+{/* COMPLETE COMMS */}
+
+<button
+  type="button"
+  onClick={bypassCommunication}
+  className="rounded-xl border border-amber-300/30 bg-amber-500/20 px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-amber-200 transition hover:bg-amber-500/30 hover:text-white"
+  title="Skip the entire communication step"
+>
+  Skip Communication
+</button>
+
 
 
 

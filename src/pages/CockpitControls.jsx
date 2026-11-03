@@ -1,5 +1,5 @@
 import { CheckCircle2, Plane, RefreshCcw, RotateCcw, Settings2 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import CommsTrainingPanel from "../components/CommsTrainingPanel";
 import SimulatedInstrumentPanel from "../components/SimulatedInstrumentPanel";
 import { controlSections } from "../data/controlDefinitions";
@@ -12,20 +12,20 @@ import { simulatorBridge } from "../services/simulatorBridge";
    but are never rendered as touchscreen buttons. Intercom, Radio, and Transponder are also physical.
    ============================================================ */
 const HARDWARE_CONTROL_IDS = new Set([
-  "master_switch",
-  "generator",
-  "fuel_pump",
-  "friction_lock",
-  "flaps",
-  "chronometer",
-  "avionics_master",
-  "strobe_light",
-  "landing_light",
-  "nav_light",
-  "intercom",
-  "radio",
-  "transponder",
-]); 
+    "master_switch",
+    "generator",
+    "fuel_pump",
+    "friction_lock",
+    "flaps",
+    "chronometer",
+    "avionics_master",
+    "strobe_light",
+   "landing_light",
+   "nav_light",
+    "intercom",
+    "radio",
+   "transponder",
+]);
 /* ============================================================
    HELPERS
    ============================================================ */
@@ -463,6 +463,302 @@ function CurrentStepCard({ currentStep, currentStepIndex, totalSteps, feedback, 
    ============================================================ */
 function CockpitControlsPage() {
   const { controls, setControl, activeChecklistId, currentChecklist, selectChecklist, currentStepIndex, currentStep, progressPercentage, isChecklistComplete, markManualStepComplete, markCommsStepComplete, feedback, resetChecklistProgress, resetAllControls, hardResetAll } = useSimulator();
+  /* ==========================================================
+   TOUCHSCREEN CONTROL + ENGINE START AUDIO
+   ========================================================== */
+
+
+  /* ==========================================================
+   ENGINE AUDIO
+   ========================================================== */
+
+  const crankAudioRef = useRef(null);
+
+  const engineAudioRef = useRef(null);
+  const engineAudioBRef = useRef(null);
+
+  const activeEngineRef = useRef("A");
+  const engineCrossfadeTimerRef = useRef(null);
+
+  // Load audio once when the cockpit page opens.
+  useEffect(() => {
+    const crankAudio =
+      new Audio("/sounds/engine-crank.mp3");
+
+    const engineAudio =
+      new Audio("/sounds/engine-loop.mp3");
+
+    const engineAudioB =
+      new Audio("/sounds/engine-loop.mp3");
+
+    crankAudio.preload = "auto";
+    engineAudio.preload = "auto";
+    engineAudioB.preload = "auto";
+
+    crankAudio.volume = 0.9;
+
+    engineAudio.volume = 0.75;
+    engineAudioB.volume = 0;
+
+    engineAudio.loop = false;
+    engineAudioB.loop = false;
+
+
+    if ("preservesPitch" in engineAudio) {
+      engineAudio.preservesPitch = false;
+    }
+
+    if ("preservesPitch" in engineAudioB) {
+      engineAudioB.preservesPitch = false;
+    }
+
+    crankAudioRef.current = crankAudio;
+    engineAudioRef.current = engineAudio;
+    engineAudioBRef.current = engineAudioB;
+
+    return () => {
+      crankAudio.pause();
+      engineAudio.pause();
+      engineAudioB.pause();
+
+      crankAudio.onended = null;
+
+      clearInterval(engineCrossfadeTimerRef.current);
+
+      crankAudioRef.current = null;
+      engineAudioRef.current = null;
+      engineAudioBRef.current = null;
+    };
+  }, []);
+
+  function startSmoothEngineLoop() {
+    const audioA = engineAudioRef.current;
+    const audioB = engineAudioBRef.current;
+
+    if (!audioA || !audioB) {
+      return;
+    }
+
+    const CROSSFADE_SECONDS = 0.4;
+    const TARGET_VOLUME = 0.75;
+
+    clearInterval(engineCrossfadeTimerRef.current);
+
+    activeEngineRef.current = "A";
+
+    audioA.pause();
+    audioB.pause();
+
+    audioA.currentTime = 0;
+    audioB.currentTime = 0;
+
+    audioA.volume = TARGET_VOLUME;
+    audioB.volume = 0;
+
+    audioA.play().catch((error) => {
+      console.error(
+        "Unable to play engine sound:",
+        error
+      );
+    });
+
+    let crossfading = false;
+
+    engineCrossfadeTimerRef.current =
+      setInterval(() => {
+        const current =
+          activeEngineRef.current === "A"
+            ? audioA
+            : audioB;
+
+        const next =
+          activeEngineRef.current === "A"
+            ? audioB
+            : audioA;
+
+        if (
+          !current.duration ||
+          crossfading
+        ) {
+          return;
+        }
+
+        const remaining =
+          current.duration - current.currentTime;
+
+        if (remaining <= CROSSFADE_SECONDS) {
+          crossfading = true;
+
+          next.currentTime = 0;
+          next.volume = 0;
+
+          next.play().catch((error) => {
+            console.error(
+              "Unable to start crossfade:",
+              error
+            );
+          });
+
+          const fadeSteps = 20;
+
+          const fadeInterval =
+            (CROSSFADE_SECONDS * 1000) /
+            fadeSteps;
+
+          let step = 0;
+
+          const fadeTimer =
+            setInterval(() => {
+              step += 1;
+
+              const progress =
+                step / fadeSteps;
+
+              current.volume =
+                TARGET_VOLUME *
+                (1 - progress);
+
+              next.volume =
+                TARGET_VOLUME *
+                progress;
+
+              if (step >= fadeSteps) {
+                clearInterval(fadeTimer);
+
+                current.pause();
+                current.currentTime = 0;
+                current.volume = 0;
+
+                next.volume =
+                  TARGET_VOLUME;
+
+                activeEngineRef.current =
+                  activeEngineRef.current === "A"
+                    ? "B"
+                    : "A";
+
+                crossfading = false;
+              }
+            }, fadeInterval);
+        }
+      }, 50);
+  }
+
+  function stopSmoothEngineLoop() {
+    clearInterval(
+      engineCrossfadeTimerRef.current
+    );
+
+    engineCrossfadeTimerRef.current = null;
+
+    const audioA =
+      engineAudioRef.current;
+
+    const audioB =
+      engineAudioBRef.current;
+
+    [audioA, audioB].forEach((audio) => {
+      if (!audio) {
+        return;
+      }
+
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = 0;
+    });
+
+    activeEngineRef.current = "A";
+  }
+
+  /* ==========================================================
+   ENGINE START DETECTOR
+   ========================================================== */
+
+  const previousIgnitionRef = useRef(controls.ignition);
+
+  useEffect(() => {
+    const previousIgnition =
+      previousIgnitionRef.current;
+
+    const crankAudio =
+      crankAudioRef.current;
+
+    const engineAudio =
+      engineAudioRef.current;
+
+    if (
+      controls.ignition === "START" &&
+      previousIgnition !== "START" &&
+      crankAudio &&
+      engineAudio
+    ) {
+      crankAudio.pause();
+      engineAudio.pause();
+
+      crankAudio.currentTime = 0;
+      engineAudio.currentTime = 0;
+
+      crankAudio.onended = () => {
+        startSmoothEngineLoop();
+      };
+
+      crankAudio.play().catch((error) => {
+        console.error(
+          "Unable to play crank sound:",
+          error
+        );
+      });
+    }
+
+    previousIgnitionRef.current =
+      controls.ignition;
+  }, [controls.ignition]);
+
+  // Change engine RPM sound according to touchscreen throttle.
+useEffect(() => {
+  const audioA = engineAudioRef.current;
+  const audioB = engineAudioBRef.current;
+
+  const throttleRates = {
+    IDLE: 0.75,
+    "1000": 0.85,
+    "1000_1200": 0.95,
+    "1640": 1.15,
+    FULL: 1.50,
+  };
+
+  const rate =
+    throttleRates[controls.throttle] ?? 0.75;
+
+  if (audioA) {
+    audioA.playbackRate = rate;
+  }
+
+  if (audioB) {
+    audioB.playbackRate = rate;
+  }
+}, [controls.throttle]);
+
+  // Stop all engine audio whenever ignition returns to OFF.
+  // This also handles Reset Controls / Full Reset.
+  useEffect(() => {
+    if (controls.ignition !== "OFF") {
+      return;
+    }
+
+    const crankAudio = crankAudioRef.current;
+    const engineAudio = engineAudioRef.current;
+
+    if (crankAudio) {
+      crankAudio.pause();
+      crankAudio.currentTime = 0;
+    }
+
+    if (engineAudio) {
+      engineAudio.pause();
+      engineAudio.currentTime = 0;
+    }
+  }, [controls.ignition]);
   /* ==========================================================
      AUTOMATIC PHYSICAL GUIDANCE LED
      ========================================================== */

@@ -12,19 +12,19 @@ import { simulatorBridge } from "../services/simulatorBridge";
    but are never rendered as touchscreen buttons. Intercom, Radio, and Transponder are also physical.
    ============================================================ */
 const HARDWARE_CONTROL_IDS = new Set([
-    "master_switch",
-    "generator",
-    "fuel_pump",
-    "friction_lock",
-    "flaps",
-    "chronometer",
-    "avionics_master",
-    "strobe_light",
-   "landing_light",
-   "nav_light",
-    "intercom",
-    "radio",
-   "transponder",
+     "master_switch",
+     "generator",
+     "fuel_pump",
+     "friction_lock",
+     "flaps",
+     "chronometer",
+     "avionics_master",
+     "strobe_light",
+    "landing_light",
+    "nav_light",
+     "intercom",
+     "radio",
+    "transponder",
 ]);
 /* ============================================================
    HELPERS
@@ -693,10 +693,10 @@ function CockpitControlsPage() {
       engineAudio
     ) {
       crankAudio.pause();
-      engineAudio.pause();
+
+      stopSmoothEngineLoop();
 
       crankAudio.currentTime = 0;
-      engineAudio.currentTime = 0;
 
       crankAudio.onended = () => {
         startSmoothEngineLoop();
@@ -715,29 +715,29 @@ function CockpitControlsPage() {
   }, [controls.ignition]);
 
   // Change engine RPM sound according to touchscreen throttle.
-useEffect(() => {
-  const audioA = engineAudioRef.current;
-  const audioB = engineAudioBRef.current;
+  useEffect(() => {
+    const audioA = engineAudioRef.current;
+    const audioB = engineAudioBRef.current;
 
-  const throttleRates = {
-    IDLE: 0.75,
-    "1000": 0.85,
-    "1000_1200": 0.95,
-    "1640": 1.15,
-    FULL: 1.50,
-  };
+    const throttleRates = {
+      IDLE: 0.75,
+      "1000": 0.85,
+      "1000_1200": 0.95,
+      "1640": 1.15,
+      FULL: 1.50,
+    };
 
-  const rate =
-    throttleRates[controls.throttle] ?? 0.75;
+    const rate =
+      throttleRates[controls.throttle] ?? 0.75;
 
-  if (audioA) {
-    audioA.playbackRate = rate;
-  }
+    if (audioA) {
+      audioA.playbackRate = rate;
+    }
 
-  if (audioB) {
-    audioB.playbackRate = rate;
-  }
-}, [controls.throttle]);
+    if (audioB) {
+      audioB.playbackRate = rate;
+    }
+  }, [controls.throttle]);
 
   // Stop all engine audio whenever ignition returns to OFF.
   // This also handles Reset Controls / Full Reset.
@@ -746,18 +746,17 @@ useEffect(() => {
       return;
     }
 
-    const crankAudio = crankAudioRef.current;
-    const engineAudio = engineAudioRef.current;
+    const crankAudio =
+      crankAudioRef.current;
 
     if (crankAudio) {
       crankAudio.pause();
       crankAudio.currentTime = 0;
+      crankAudio.onended = null;
     }
 
-    if (engineAudio) {
-      engineAudio.pause();
-      engineAudio.currentTime = 0;
-    }
+    stopSmoothEngineLoop();
+
   }, [controls.ignition]);
   /* ==========================================================
      AUTOMATIC PHYSICAL GUIDANCE LED

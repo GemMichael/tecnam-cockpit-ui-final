@@ -3268,7 +3268,27 @@ function evaluateTransmission(
 
 
 
+function resetCommunication() {
+  stopAtcSpeech();
 
+  setIsAtcSpeaking(false);
+
+  setStageIndex(0);
+
+  setTranscript("");
+
+  setResult(null);
+
+  setLastAtcResponse(null);
+
+  setComplete(false);
+
+  setAtcVoiceError(null);
+
+  setPendingClarification(null);
+
+  setRememberedChecks(null);
+}
 
   /* ==========================================================
 
@@ -3278,107 +3298,87 @@ function evaluateTransmission(
 
 
 
-  function resetCommunication() {
-
-    stopAtcSpeech();
-
-
-
-
-
-    setIsAtcSpeaking(
-
-      false
-
-    );
-
-
-
-
-
-    setStageIndex(0);
-
-
-
-
-
-    setTranscript("");
-
-
-
-
-
-    setResult(null);
-
-
-
-
-
-    setLastAtcResponse(
-
-      null
-
-    );
-
-
-
-
-
-    setComplete(false);
-
-
-
-
-
-    setAtcVoiceError(
-
-      null
-
-    );
-
-
-
-
-
-    setPendingClarification(
-
-      null
-
-    );
-
-
-
-
-
-    setRememberedChecks(
-
-      null
-
-    );
-
-  }
-
-
-  function bypassCommunication() {
+function markCurrentCommunicationCorrect() {
   stopAtcSpeech();
 
   setIsAtcSpeaking(false);
+  setAtcVoiceError(null);
 
-  scenario.stages.forEach((stage) => {
-    recordCommsAttempt({
-      scenarioId,
-      stageId: stage.id,
-      stageTitle: stage.title,
-      transcript: "[Communication bypassed by instructor]",
-      checks: [],
-      mode: "bypass",
-      targetLabel: null,
-      stageComplete: true,
-      clarification: null,
-    });
+  /*
+    Use the checks already produced by the validator when possible.
+
+    The instructor is manually approving this transmission,
+    so all current checks are marked correct.
+  */
+  const existingChecks =
+    result?.checks ||
+    rememberedChecks ||
+    [];
+
+  const approvedChecks =
+    existingChecks.map((check) => ({
+      ...check,
+      correct: true,
+    }));
+
+  /*
+    Show the current transmission as manually accepted.
+  */
+  setResult({
+    checks: approvedChecks,
+    correct: true,
   });
 
-  onComplete();
+  /*
+    Remove any active "Say Again" request because
+    the instructor has accepted this transmission.
+  */
+  setPendingClarification(null);
+  setRememberedChecks(null);
+
+  /*
+    Record that this stage was completed using
+    instructor/manual approval.
+  */
+  recordCommsAttempt({
+    scenarioId,
+
+    stageId:
+      currentStage.id,
+
+    stageTitle:
+      currentStage.title,
+
+    transcript:
+      transcript.trim() ||
+      "[Manually approved by instructor]",
+
+    checks:
+      approvedChecks,
+
+    mode:
+      "instructor-correct",
+
+    targetLabel:
+      null,
+
+    stageComplete:
+      true,
+
+    clarification:
+      null,
+  });
+
+  /*
+    Continue using the NORMAL successful-transmission flow.
+
+    Intermediate stage:
+      ATC response -> next transmission
+
+    Final stage:
+      Communication Complete
+  */
+  finishSuccessfulTransmission();
 }
 
 
@@ -3506,11 +3506,12 @@ function evaluateTransmission(
 
 <button
   type="button"
-  onClick={bypassCommunication}
-  className="rounded-xl border border-amber-300/30 bg-amber-500/20 px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-amber-200 transition hover:bg-amber-500/30 hover:text-white"
-  title="Skip the entire communication step"
+  onClick={markCurrentCommunicationCorrect}
+  className="flex items-center gap-1.5 rounded-xl border border-emerald-300/30 bg-emerald-500/20 px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-emerald-200 transition hover:bg-emerald-500/30 hover:text-white"
+  title="Accept the current transmission as correct"
 >
-  Skip Communication
+  <Check size={14} />
+  Correct
 </button>
 
 

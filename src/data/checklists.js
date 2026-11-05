@@ -164,6 +164,21 @@ const sequenceStep = ({
   note,
 });
 
+const avionicsStep = ({
+  id,
+  title,
+  instruction,
+  task,
+  note,
+}) => ({
+  id,
+  type: "avionics",
+  title,
+  instruction,
+  task,
+  note,
+});
+
 // =============================================================
 // CHECKLISTS
 // =============================================================
@@ -1273,46 +1288,86 @@ If you have anything further to add captain, this concludes my preliminary crew 
       // -------------------------------------------------------
       // RADIO / VOR
       // -------------------------------------------------------
-      controlStep({
-        id: "bt-3",
+// -------------------------------------------------------
+// RADIO ON - PHYSICAL
+// -------------------------------------------------------
 
-        title:
-          "All Radios and VOR",
+controlStep({
+  id: "bt-3",
 
-        instruction:
-          "Turn the radio ON. The checklist also requires the radio and VOR to be set.",
+  title:
+    "All Radios and VOR",
 
-        controlId: "radio",
+  instruction:
+    "Turn the radio ON.",
 
-        expected: "ON",
+  controlId:
+    "radio",
 
-        expectedLabel:
-          "Radios ON",
+  expected: "ON",
 
-        note:
-          "The current prototype validates radio power only. Radio/VOR tuning will be added separately.",
-      }),
+  expectedLabel:
+    "Radios ON",
+}),
 
-      // -------------------------------------------------------
-      // TRANSPONDER STBY
-      // -------------------------------------------------------
-      controlStep({
-        id: "bt-4",
 
-        title:
-          "Transponder",
+// -------------------------------------------------------
+// RADIO FREQUENCY - TOUCHSCREEN
+// -------------------------------------------------------
 
-        instruction:
-          "Set the transponder to STANDBY.",
+avionicsStep({
+  id: "bt-3a",
 
-        controlId:
-          "transponder",
+  title:
+    "Radio Frequency",
 
-        expected: "STBY",
+  instruction:
+    "Tune the required radio frequency using the avionics display, transfer it to ACTIVE, then press Done.",
 
-        expectedLabel:
-          "Transponder Standby",
-      }),
+  task:
+    "radio",
+}),
+
+
+// -------------------------------------------------------
+// TRANSPONDER STBY - PHYSICAL
+// -------------------------------------------------------
+
+controlStep({
+  id: "bt-4",
+
+  title:
+    "Transponder",
+
+  instruction:
+    "Set the transponder to STANDBY.",
+
+  controlId:
+    "transponder",
+
+  expected: "STBY",
+
+  expectedLabel:
+    "Transponder Standby",
+}),
+
+
+// -------------------------------------------------------
+// TRANSPONDER SQUAWK - TOUCHSCREEN
+// -------------------------------------------------------
+
+avionicsStep({
+  id: "bt-4a",
+
+  title:
+    "Transponder Squawk",
+
+  instruction:
+    "Enter the assigned four-digit squawk code on the transponder, then press Done.",
+
+  task:
+    "transponder",
+}),
 
       // -------------------------------------------------------
       // GPS

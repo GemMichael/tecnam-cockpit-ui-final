@@ -2522,6 +2522,91 @@ export function SimulatorProvider({
 
         );
 
+        /* ========================================================
+   AVIONICS UI STEP COMPLETE
+
+   This advances the checklist after the student presses
+   Done on the Radio Frequency or Transponder Squawk UI.
+
+   IMPORTANT:
+   This does NOT call completeStep().
+   Therefore it does NOT add the avionics UI step
+   to the grading system.
+   ======================================================== */
+
+const markAvionicsStepComplete =
+  useCallback(
+    () => {
+      if (
+        !currentStep ||
+        currentStep.type !== "avionics"
+      ) {
+        return;
+      }
+
+      /*
+        Mark the avionics step complete only for
+        visible checklist progress.
+      */
+      setCompletedStepIds(
+        (previous) => {
+          if (
+            previous.includes(
+              currentStep.id
+            )
+          ) {
+            return previous;
+          }
+
+          return [
+            ...previous,
+            currentStep.id,
+          ];
+        }
+      );
+
+
+      /*
+        Reset any sequence tracker before
+        moving to the next checklist item.
+      */
+      setSequenceProgress(
+        0
+      );
+
+
+      const nextIndex =
+        currentStepIndex + 1;
+
+
+      if (
+        nextIndex >=
+        currentChecklist.steps.length
+      ) {
+        setFeedback(
+          `${currentChecklist.title} checklist complete.`
+        );
+      } else {
+        setFeedback(
+          "Avionics input complete. Proceed to the next step."
+        );
+      }
+
+
+      /*
+        Move to the next checklist item.
+      */
+      setCurrentStepIndex(
+        nextIndex
+      );
+    },
+    [
+      currentStep,
+      currentStepIndex,
+      currentChecklist,
+    ]
+  );
+
 
 
 
@@ -2769,6 +2854,8 @@ export function SimulatorProvider({
 
 
         markCommsStepComplete,
+
+        markAvionicsStepComplete,
 
 
 

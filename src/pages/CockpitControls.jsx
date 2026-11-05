@@ -6,6 +6,7 @@ import { controlSections } from "../data/controlDefinitions";
 import { checklists } from "../data/checklists";
 import { useSimulator } from "../context/SimulatorContext";
 import { simulatorBridge } from "../services/simulatorBridge";
+import AvionicsPanel from "../components/AvionicsPanel";
 /* ============================================================
    PHYSICAL CONTROLS
    These stay in SimulatorContext / checklist logic,
@@ -19,7 +20,7 @@ const HARDWARE_CONTROL_IDS = new Set([
      "flaps",
      "chronometer",
      "avionics_master",
-     "strobe_light",
+   "strobe_light",
     "landing_light",
     "nav_light",
      "intercom",
@@ -462,7 +463,7 @@ function CurrentStepCard({ currentStep, currentStepIndex, totalSteps, feedback, 
    MAIN PAGE
    ============================================================ */
 function CockpitControlsPage() {
-  const { controls, setControl, activeChecklistId, currentChecklist, selectChecklist, currentStepIndex, currentStep, progressPercentage, isChecklistComplete, markManualStepComplete, markCommsStepComplete, feedback, resetChecklistProgress, resetAllControls, hardResetAll } = useSimulator();
+  const { controls, setControl, activeChecklistId, currentChecklist, selectChecklist, currentStepIndex, currentStep, progressPercentage, isChecklistComplete, markManualStepComplete, markCommsStepComplete, feedback, resetChecklistProgress, resetAllControls, hardResetAll, markAvionicsStepComplete, } = useSimulator();
   /* ==========================================================
    TOUCHSCREEN CONTROL + ENGINE START AUDIO
    ========================================================== */
@@ -804,16 +805,18 @@ function CockpitControlsPage() {
     HARDWARE_CONTROL_IDS.has(currentStepControlId));
   const totalSteps = currentChecklist?.steps
     ?.length || 0;
-  const specialWorkspace =
-    Boolean(
-      currentStep?.briefingText
-    ) ||
-    currentStep?.type ===
-    "comms" ||
-    currentStep?.type ===
-    "instrument" ||
-    currentStep?.type ===
-    "timed";
+const specialWorkspace =
+  Boolean(
+    currentStep?.briefingText
+  ) ||
+  currentStep?.type ===
+  "comms" ||
+  currentStep?.type ===
+  "instrument" ||
+  currentStep?.type ===
+  "timed" ||
+  currentStep?.type ===
+  "avionics";
   /* ==========================================================
      FIXED LANDSCAPE GRID
      This is what removes the vertical scrollbar from the
@@ -880,6 +883,41 @@ function CockpitControlsPage() {
         "comms" && (<div className="touch-scroll h-full min-h-0 overflow-y-auto p-2">
           <CommsTrainingPanel scenarioId={currentStep.scenario} onComplete={markCommsStepComplete} />
         </div>)}
+
+        {/* ====================================================
+    AVIONICS
+    ==================================================== */}
+
+{currentStep?.type ===
+  "avionics" && (
+  <div
+    className="
+      touch-scroll
+      h-full
+      min-h-0
+      overflow-y-auto
+      p-2
+    "
+  >
+    <AvionicsPanel
+      task={
+        currentStep.task
+      }
+
+      radioPowered={
+        controls.radio === "ON"
+      }
+
+      transponderMode={
+        controls.transponder
+      }
+
+      onDone={
+        markAvionicsStepComplete
+      }
+    />
+  </div>
+)}
       {/* INSTRUMENT / TIMER */}
       {(currentStep?.type ===
         "instrument" ||

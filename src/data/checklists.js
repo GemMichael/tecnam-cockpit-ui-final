@@ -305,19 +305,19 @@ export const checklists = [
       // PRELIMINARY CREW BRIEFING
       // -------------------------------------------------------
 
-manualStep({
-  id: "ci-5a",
+      manualStep({
+        id: "ci-5a",
 
-  title:
-    "Preliminary Crew Briefing",
+        title:
+          "Preliminary Crew Briefing",
 
-  instruction:
-    "Recite the Preliminary Crew Briefing below.",
+        instruction:
+          "Recite the Preliminary Crew Briefing below.",
 
-  actionLabel:
-    "Confirm Briefing Obtained",
+        actionLabel:
+          "Confirm Briefing Obtained",
 
-  briefingText: `Abort Plan of Take-off Briefing
+        briefingText: `Abort Plan of Take-off Briefing
 
 This will be flaps take-off configuration normal, take-off from runway 17, cockpit silence shall be observed except for take-off callout 40, 50, and rotate at 60kts.
 
@@ -336,7 +336,7 @@ If unsuccessful, proceed to an emergency landing. Flaps up, airspeed 70kts, plac
 Positive transfer of controls shall be done with a command of my controls and a response of your controls.
 
 If you have anything further to add captain, this concludes my preliminary crew briefing.`,
-}),
+      }),
 
       // -------------------------------------------------------
       // MASTER
@@ -633,6 +633,23 @@ If you have anything further to add captain, this concludes my preliminary crew 
 
         expectedLabel:
           "Radio ON",
+      }),
+
+      // -------------------------------------------------------
+      // RADIO FREQUENCY - TOUCHSCREEN
+      // -------------------------------------------------------
+
+      avionicsStep({
+        id: "ci-18a",
+
+        title:
+          "Radio Frequency",
+
+        instruction:
+          "Tune the required radio frequency, transfer it to ACTIVE, then press Done.",
+
+        task:
+          "radio",
       }),
 
       // -------------------------------------------------------
@@ -1288,86 +1305,69 @@ If you have anything further to add captain, this concludes my preliminary crew 
       // -------------------------------------------------------
       // RADIO / VOR
       // -------------------------------------------------------
-// -------------------------------------------------------
-// RADIO ON - PHYSICAL
-// -------------------------------------------------------
+      // -------------------------------------------------------
+      // RADIO ON - PHYSICAL
+      // -------------------------------------------------------
 
-controlStep({
-  id: "bt-3",
+      controlStep({
+        id: "bt-3",
 
-  title:
-    "All Radios and VOR",
+        title:
+          "All Radios and VOR",
 
-  instruction:
-    "Turn the radio ON.",
+        instruction:
+          "Turn the radio ON.",
 
-  controlId:
-    "radio",
+        controlId:
+          "radio",
 
-  expected: "ON",
+        expected: "ON",
 
-  expectedLabel:
-    "Radios ON",
-}),
-
-
-// -------------------------------------------------------
-// RADIO FREQUENCY - TOUCHSCREEN
-// -------------------------------------------------------
-
-avionicsStep({
-  id: "bt-3a",
-
-  title:
-    "Radio Frequency",
-
-  instruction:
-    "Tune the required radio frequency using the avionics display, transfer it to ACTIVE, then press Done.",
-
-  task:
-    "radio",
-}),
+        expectedLabel:
+          "Radios ON",
+      }),
 
 
-// -------------------------------------------------------
-// TRANSPONDER STBY - PHYSICAL
-// -------------------------------------------------------
 
-controlStep({
-  id: "bt-4",
+      // -------------------------------------------------------
+      // TRANSPONDER STBY - PHYSICAL
+      // -------------------------------------------------------
 
-  title:
-    "Transponder",
+      controlStep({
+        id: "bt-4",
 
-  instruction:
-    "Set the transponder to STANDBY.",
+        title:
+          "Transponder",
 
-  controlId:
-    "transponder",
+        instruction:
+          "Set the transponder to STANDBY.",
 
-  expected: "STBY",
+        controlId:
+          "transponder",
 
-  expectedLabel:
-    "Transponder Standby",
-}),
+        expected: "STBY",
+
+        expectedLabel:
+          "Transponder Standby",
+      }),
 
 
-// -------------------------------------------------------
-// TRANSPONDER SQUAWK - TOUCHSCREEN
-// -------------------------------------------------------
+      // -------------------------------------------------------
+      // TRANSPONDER SQUAWK - TOUCHSCREEN
+      // -------------------------------------------------------
 
-avionicsStep({
-  id: "bt-4a",
+      avionicsStep({
+        id: "bt-4a",
 
-  title:
-    "Transponder Squawk",
+        title:
+          "Transponder Squawk",
 
-  instruction:
-    "Enter the assigned four-digit squawk code on the transponder, then press Done.",
+        instruction:
+          "Enter the assigned four-digit squawk code on the transponder, then press Done.",
 
-  task:
-    "transponder",
-}),
+        task:
+          "transponder",
+      }),
 
       // -------------------------------------------------------
       // GPS

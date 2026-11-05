@@ -1282,7 +1282,7 @@ className="
   mx-auto
   flex
   w-full
-  max-w-[820px]
+  max-w-[900px]
   flex-col
   gap-1
   overflow-hidden
@@ -1333,7 +1333,9 @@ className="
               >
                 {task === "radio"
                   ? "Tune the assigned radio frequency and transfer it to ACTIVE."
-                  : "Enter the assigned four-digit transponder squawk."}
+                  : task === "transponder"
+                    ? "Enter the assigned four-digit transponder squawk."
+                    : "Avionics preview: radio and transponder controls are available."}
               </p>
             </div>
 
@@ -1362,43 +1364,53 @@ className="
         )}
 
 
-        {/* RADIO 1 */}
+        {/* RADIO */}
 
-        <RadioUnit
-          title="COM 1"
-          model="GARMIN"
-          powered={
-            radioPowered
-          }
-          interactive={
-            radioInteractive
-          }
-          initialActive={
-            118.000
-          }
-          initialStandby={
-            121.500
-          }
-          onFrequencyTransferred={
-            handleFrequencyTransferred
-          }
-        />
+        {(
+          task === "radio" ||
+          task === "all"
+        ) && (
+          <RadioUnit
+            title="COM 1"
+            model="GARMIN"
+            powered={
+              radioPowered
+            }
+            interactive={
+              radioInteractive
+            }
+            initialActive={
+              118.000
+            }
+            initialStandby={
+              121.500
+            }
+            onFrequencyTransferred={
+              handleFrequencyTransferred
+            }
+          />
+        )}
 
 
         {/* TRANSPONDER */}
 
-        <TransponderUnit
-          mode={
-            transponderMode
-          }
-          interactive={
-            transponderInteractive
-          }
-          initialSquawk="0000"
-          onSquawkEntered={
-            handleSquawkEntered
-          }
-        />
+        {(
+          task === "transponder" ||
+          task === "all"
+        ) && (
+          <TransponderUnit
+            mode={
+              transponderMode
+            }
+            interactive={
+              transponderInteractive
+            }
+            initialSquawk="0000"
+            onSquawkEntered={
+              handleSquawkEntered
+            }
+          />
+        )}
 
 
         {/* DONE */}

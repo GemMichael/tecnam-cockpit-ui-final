@@ -156,10 +156,6 @@ function App() {
         }
       />
 
-      <Route
-        path="/avionics-preview"
-        element={<AvionicsPreview />}
-      />
 
 
       {/* Registration does NOT require login */}

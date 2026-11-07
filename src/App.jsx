@@ -1,4 +1,3 @@
-
 import {
   Navigate,
   Route,
@@ -11,6 +10,11 @@ import {
   SimulatorProvider,
 } from "./context/SimulatorContext";
 
+import {
+  getSelectedStudent,
+} from "./services/studentStorage";
+
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ChooseChecklist from "./pages/ChooseChecklist";
 import ChecklistExecution from "./pages/ChecklistExecution";
@@ -24,17 +28,90 @@ import StudentRegistration from "./pages/StudentRegistration";
 import CockpitControls from "./pages/CockpitControls";
 import AvionicsPreview from "./pages/AvionicsPanel";
 
+
 /* ============================================================
-   SIMULATOR APPLICATION LAYOUT
-
-   No login required.
-   No authentication verification.
-   No student selection requirement.
-
-   Dashboard opens automatically.
+   GET LOGGED-IN USER
    ============================================================ */
 
-function SimulatorApplication() {
+function getLoggedInUser() {
+  try {
+    const stored =
+      localStorage.getItem(
+        "tecnamUser"
+      );
+
+
+    if (!stored) {
+      return null;
+    }
+
+
+    return JSON.parse(
+      stored
+    );
+  } catch (
+  error
+  ) {
+    console.warn(
+      "Invalid stored login data.",
+      error
+    );
+
+
+    localStorage.removeItem(
+      "tecnamUser"
+    );
+
+
+    return null;
+  }
+}
+
+
+/* ============================================================
+   PROTECTED APPLICATION
+
+   Student must have BOTH:
+
+   1. tecnamUser
+   2. selected registered student
+
+   Otherwise access is denied.
+
+   This protects:
+
+   /dashboard
+   /controls
+   /checklists
+   /history
+   etc.
+
+   Even if someone manually types the URL.
+   ============================================================ */
+
+function ProtectedApplication() {
+  const user =
+    getLoggedInUser();
+
+
+  const student =
+    getSelectedStudent();
+
+
+  if (
+    !user ||
+    !student ||
+    !student.studentId
+  ) {
+    return (
+      <Navigate
+        to="/"
+        replace
+      />
+    );
+  }
+
+
   return (
     <SimulatorProvider>
       <AppShell />
@@ -42,8 +119,11 @@ function SimulatorApplication() {
   );
 }
 
+
 /* ============================================================
-   STUDENT REGISTRATION PAGE
+   PUBLIC REGISTRATION LAYOUT
+
+   Registration must be accessible before login.
    ============================================================ */
 
 function RegistrationPage() {
@@ -56,6 +136,7 @@ function RegistrationPage() {
   );
 }
 
+
 /* ============================================================
    APP
    ============================================================ */
@@ -64,118 +145,162 @@ function App() {
   return (
     <Routes>
 
-      {/* DEFAULT ROUTE - DASHBOARD */}
+      {/* =====================================================
+          PUBLIC ROUTES
+          ===================================================== */}
 
       <Route
         path="/"
         element={
-          <Navigate to="/dashboard" replace />
+          <Dashboard />
         }
       />
-
-      {/* AVIONICS PREVIEW */}
 
       <Route
         path="/avionics-preview"
         element={<AvionicsPreview />}
       />
 
-      {/* STUDENT REGISTRATION */}
+
+      {/* Registration does NOT require login */}
 
       <Route
         path="/register"
-        element={<RegistrationPage />}
+        element={
+          <RegistrationPage />
+        }
       />
 
-      {/* SIMULATOR APPLICATION */}
+
+      {/* =====================================================
+          PROTECTED APPLICATION
+          ===================================================== */}
 
       <Route
-        element={<SimulatorApplication />}
+        element={
+          <ProtectedApplication />
+        }
       >
-
-        {/* DASHBOARD */}
-
-        <Route
-          path="/dashboard"
-          element={<Dashboard />}
-        />
 
         {/* COCKPIT CONTROLS */}
 
         <Route
           path="/controls"
-          element={<CockpitControls />}
+          element={
+            <CockpitControls />
+          }
         />
+
+
+        {/* DASHBOARD */}
+
+        <Route
+          path="/dashboard"
+          element={
+            <Dashboard />
+          }
+        />
+
 
         {/* CHECKLIST SELECTION */}
 
         <Route
           path="/checklists"
-          element={<ChooseChecklist />}
+          element={
+            <ChooseChecklist />
+          }
         />
+
 
         {/* CHECKLIST EXECUTION */}
 
         <Route
           path="/checklists/:checklistId"
-          element={<ChecklistExecution />}
+          element={
+            <ChecklistExecution />
+          }
         />
+
 
         {/* MANUAL */}
 
         <Route
           path="/manual"
-          element={<Manual />}
+          element={
+            <Manual />
+          }
         />
+
 
         {/* PERFORMANCE */}
 
         <Route
           path="/performance"
-          element={<Performance />}
+          element={
+            <Performance />
+          }
         />
+
 
         {/* HISTORY */}
 
         <Route
           path="/history"
-          element={<HistoryPage />}
+          element={
+            <HistoryPage />
+          }
         />
+
 
         {/* LEADERBOARD */}
 
         <Route
           path="/leaderboard"
-          element={<Leaderboard />}
+          element={
+            <Leaderboard />
+          }
         />
+
 
         {/* SETTINGS */}
 
         <Route
           path="/settings"
-          element={<Settings />}
+          element={
+            <Settings />
+          }
         />
+
 
         {/* HELP */}
 
         <Route
           path="/help"
-          element={<HelpGuide />}
+          element={
+            <HelpGuide />
+          }
         />
 
       </Route>
 
-      {/* INVALID URL - REDIRECT TO DASHBOARD */}
+
+      {/* =====================================================
+          INVALID URL
+          ===================================================== */}
 
       <Route
         path="*"
         element={
-          <Navigate to="/dashboard" replace />
+          <Navigate
+            to="/"
+            replace
+          />
         }
       />
 
     </Routes>
   );
 }
+
 
 export default App;

@@ -26,7 +26,7 @@ import Settings from "./pages/Settings";
 import HelpGuide from "./pages/HelpGuide";
 import StudentRegistration from "./pages/StudentRegistration";
 import CockpitControls from "./pages/CockpitControls";
-import AvionicsPreview from "./pages/AvionicsPanel";
+
 
 
 /* ============================================================

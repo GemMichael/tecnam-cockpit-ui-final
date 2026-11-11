@@ -21,6 +21,7 @@ import {
 
 import {
   getSelectedStudent,
+  loginStudent,
   setSelectedStudent,
 } from "../services/studentStorage";
 
@@ -135,7 +136,17 @@ function Login() {
       activeKeyboardField ===
       "pin"
     ) {
-      setPin(value);
+      setPin(
+        value
+          .replace(
+            /\D/g,
+            ""
+          )
+          .slice(
+            0,
+            6
+          )
+      );
 
       setError("");
     }
@@ -202,71 +213,177 @@ function Login() {
 
 
   /* ==========================================================
-     DEMO LOGIN (NO CREDENTIAL VERIFICATION)
-
-     Any username and any PIN (including empty values) work.
-     Creates a demo student/session for the existing route guard.
-     Do not enable for real student records or production auth.
+     LOGIN
      ========================================================== */
 
-  function login(event) {
+  async function login(
+    event
+  ) {
     event.preventDefault();
+
     setError("");
-    setLoading(true);
+
+
+    const cleanIdentifier =
+      identifier.trim();
+
+
+    if (
+      !cleanIdentifier
+    ) {
+      setError(
+        "Please enter your username or Student ID."
+      );
+
+      return;
+    }
+
+
+    if (
+      pin.length !==
+      6
+    ) {
+      setError(
+        "Please enter your 6-digit PIN."
+      );
+
+      return;
+    }
+
+
+    setLoading(
+      true
+    );
+
 
     try {
-      const username = identifier.trim() || "Guest";
-      const normalizedId = username
-        .toUpperCase()
-        .replace(/[^A-Z0-9_-]/g, "")
-        .slice(0, 32) || "GUEST";
+      const result =
+        await loginStudent({
+          identifier:
+            cleanIdentifier,
 
-      // Keep training data grouped by the same entered username.
-      const student = {
-        studentId: `DEMO-${normalizedId}`,
-        studentNumber: username,
-        name: username,
-        course: "Demo Training",
-        yearLevel: "",
-        flightProgress: "",
-      };
+          pin,
+        });
 
-      // The PIN is intentionally never checked or stored.
-      setSelectedStudent(student);
+
+      const student =
+        result.student;
+
+
+      const user =
+        result.user;
+
+
+      /* ======================================================
+         ACTIVE STUDENT
+         ====================================================== */
+
+      setSelectedStudent(
+        student
+      );
+
+
+      /* ======================================================
+         LOGIN SESSION
+
+         PIN is NEVER saved here.
+         ====================================================== */
 
       localStorage.setItem(
         "tecnamUser",
+
         JSON.stringify({
-          userId: student.studentId,
-          username,
-          role: "student",
-          studentId: student.studentId,
-          studentNumber: student.studentNumber,
-          name: student.name,
+          userId:
+            user.userId,
+
+          username:
+            user.username,
+
+          role:
+            user.role,
+
+          studentId:
+            student.studentId,
+
+          studentNumber:
+            student.studentNumber,
+
+          name:
+            student.name,
         })
       );
 
+
+      /* ======================================================
+         NEW TRAINING SESSION
+         ====================================================== */
+
       startNewTrainingSession({
-        studentId: student.studentId,
-        studentNumber: student.studentNumber,
-        studentName: student.name,
-        username,
-        course: student.course,
-        yearLevel: student.yearLevel,
-        flightProgress: student.flightProgress,
+        studentId:
+          student.studentId,
+
+        studentNumber:
+          student.studentNumber,
+
+        studentName:
+          student.name,
+
+        username:
+          user.username,
+
+        course:
+          student.course,
+
+        yearLevel:
+          student.yearLevel,
+
+        flightProgress:
+          student.flightProgress,
       });
 
-      navigate("/dashboard", { replace: true });
-    } catch (loginError) {
-      console.error("Demo login failed:", loginError);
-      setError(loginError?.message || "Unable to start demo session.");
+
+      navigate(
+        "/dashboard",
+        {
+          replace:
+            true,
+        }
+      );
+    } catch (
+      loginError
+    ) {
+      setError(
+        loginError.message ||
+          "Login failed."
+      );
     } finally {
-      setLoading(false);
+      setLoading(
+        false
+      );
     }
   }
 
-  function handlePinChange(event) {
-    setPin(event.target.value);
+
+  function handlePinChange(
+    event
+  ) {
+    const value =
+      event.target.value
+        .replace(
+          /\D/g,
+          ""
+        )
+        .slice(
+          0,
+          6
+        );
+
+
+    setPin(
+      value
+    );
+
+
     setError("");
   }
 
@@ -421,12 +538,12 @@ function Login() {
 
 
               <h2 className="mt-3 text-4xl font-bold tracking-tight">
-                Simulator Login
+                Student Login
               </h2>
 
 
               <p className="mt-3 text-sm leading-6 text-slate-500">
-                Demo mode: enter any username and PIN, or leave them blank to continue.
+                Sign in using your username or Student ID and your 6-digit PIN.
               </p>
 
 
@@ -534,7 +651,7 @@ function Login() {
                 <div>
 
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    PIN / Password
+                    6-Digit PIN
                   </label>
 
 
@@ -553,7 +670,7 @@ function Login() {
                           : "password"
                       }
 
-                      inputMode="text"
+                      inputMode="numeric"
 
                       /*
                        * Important:
@@ -584,9 +701,9 @@ function Login() {
                         handlePinChange
                       }
 
-                      placeholder="Any PIN or password"
+                      placeholder="••••••"
 
-                      autoComplete="off"
+                      autoComplete="current-password"
 
                       className="w-full rounded-2xl border border-slate-200 bg-white/80 py-4 pl-12 pr-12 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     />
@@ -676,7 +793,7 @@ function Login() {
 
 
               <p className="mt-6 text-center text-xs text-slate-400">
-                Demo access enabled: credentials are not verified. Do not use for official student assessments.
+                Only registered students with a valid PIN can access the cockpit training system.
               </p>
 
             </div>
@@ -700,7 +817,10 @@ function Login() {
         }
 
         mode={
-          "text"
+          activeKeyboardField ===
+          "pin"
+            ? "numeric"
+            : "text"
         }
 
         value={
@@ -710,7 +830,12 @@ function Login() {
             : identifier
         }
 
-        maxLength={undefined}
+        maxLength={
+          activeKeyboardField ===
+          "pin"
+            ? 6
+            : undefined
+        }
 
         masked={
           activeKeyboardField ===
@@ -721,7 +846,7 @@ function Login() {
         title={
           activeKeyboardField ===
           "pin"
-            ? "PIN / Password"
+            ? "6-Digit PIN"
             : "Username / Student ID"
         }
 

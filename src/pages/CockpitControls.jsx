@@ -13,19 +13,19 @@ import AvionicsPanel from "../components/AvionicsPanel";
    but are never rendered as touchscreen buttons. Intercom, Radio, and Transponder are also physical.
    ============================================================ */
 const HARDWARE_CONTROL_IDS = new Set([
-     "master_switch",
-     "generator",
-     "fuel_pump",
-     "friction_lock",
-     "flaps",
-     "chronometer",
-     "avionics_master",
-   "strobe_light",
-    "landing_light",
-    "nav_light",
-     "intercom",
-     "radio",
-    "transponder",
+  "master_switch",
+  "generator",
+  "fuel_pump",
+  "friction_lock",
+  "flaps",
+  "chronometer",
+  "avionics_master",
+  "strobe_light",
+  "landing_light",
+  "nav_light",
+  "intercom",
+  "radio",
+  "transponder",
 ]);
 /* ============================================================
    HELPERS
@@ -473,13 +473,18 @@ function CockpitControlsPage() {
    ENGINE AUDIO
    ========================================================== */
 
+
   const crankAudioRef = useRef(null);
 
   const engineAudioRef = useRef(null);
   const engineAudioBRef = useRef(null);
 
+  // Audio amplifier reference
+  const audioContextRef = useRef(null);
+
   const activeEngineRef = useRef("A");
   const engineCrossfadeTimerRef = useRef(null);
+
 
   // Load audio once when the cockpit page opens.
   useEffect(() => {
@@ -496,10 +501,48 @@ function CockpitControlsPage() {
     engineAudio.preload = "auto";
     engineAudioB.preload = "auto";
 
-    crankAudio.volume = 0.9;
 
+    // =======================================
+    // ENGINE AND CRANK AUDIO VOLUME
+    // =======================================
+
+    // Keep existing base volumes
+    crankAudio.volume = 0.9;
     engineAudio.volume = 0.75;
     engineAudioB.volume = 0;
+
+    // Create Web Audio API context
+    const audioContext = new (
+      window.AudioContext || window.webkitAudioContext
+    )();
+
+    // Create gain amplifier
+    const engineGain = audioContext.createGain();
+
+    // 2x amplification for engine and crank
+    engineGain.gain.value = 2.0;
+
+    // Connect ONLY the crank and engine audio
+    [crankAudio, engineAudio, engineAudioB].forEach((audio) => {
+      const source = audioContext.createMediaElementSource(audio);
+      source.connect(engineGain);
+    });
+
+    // Send amplified audio to selected output device
+    engineGain.connect(audioContext.destination);
+
+    // Save context reference
+    audioContextRef.current = audioContext;
+
+    // Allow audio to resume when the touchscreen is touched
+    const resumeEngineAudio = () => {
+      audioContext.resume().catch((error) => {
+        console.error("Engine audio resume error:", error);
+      });
+    };
+
+    window.addEventListener("pointerdown", resumeEngineAudio);
+
 
     engineAudio.loop = false;
     engineAudioB.loop = false;
@@ -517,7 +560,9 @@ function CockpitControlsPage() {
     engineAudioRef.current = engineAudio;
     engineAudioBRef.current = engineAudioB;
 
+
     return () => {
+      // Stop engine and crank playback
       crankAudio.pause();
       engineAudio.pause();
       engineAudioB.pause();
@@ -526,11 +571,23 @@ function CockpitControlsPage() {
 
       clearInterval(engineCrossfadeTimerRef.current);
 
+      // Remove touchscreen audio listener
+      window.removeEventListener(
+        "pointerdown",
+        resumeEngineAudio
+      );
+
+      // Reset references
       crankAudioRef.current = null;
       engineAudioRef.current = null;
       engineAudioBRef.current = null;
+
+      // Close Web Audio context
+      audioContextRef.current = null;
+      void audioContext.close();
     };
   }, []);
+
 
   function startSmoothEngineLoop() {
     const audioA = engineAudioRef.current;
@@ -699,16 +756,27 @@ function CockpitControlsPage() {
 
       crankAudio.currentTime = 0;
 
+
       crankAudio.onended = () => {
         startSmoothEngineLoop();
       };
 
+      // Resume the engine audio amplifier
+      audioContextRef.current?.resume().catch((error) => {
+        console.error(
+          "Unable to resume audio amplifier:",
+          error
+        );
+      });
+
+      // Play amplified crank audio
       crankAudio.play().catch((error) => {
         console.error(
           "Unable to play crank sound:",
           error
         );
       });
+
     }
 
     previousIgnitionRef.current =
@@ -805,18 +873,18 @@ function CockpitControlsPage() {
     HARDWARE_CONTROL_IDS.has(currentStepControlId));
   const totalSteps = currentChecklist?.steps
     ?.length || 0;
-const specialWorkspace =
-  Boolean(
-    currentStep?.briefingText
-  ) ||
-  currentStep?.type ===
-  "comms" ||
-  currentStep?.type ===
-  "instrument" ||
-  currentStep?.type ===
-  "timed" ||
-  currentStep?.type ===
-  "avionics";
+  const specialWorkspace =
+    Boolean(
+      currentStep?.briefingText
+    ) ||
+    currentStep?.type ===
+    "comms" ||
+    currentStep?.type ===
+    "instrument" ||
+    currentStep?.type ===
+    "timed" ||
+    currentStep?.type ===
+    "avionics";
   /* ==========================================================
      FIXED LANDSCAPE GRID
      This is what removes the vertical scrollbar from the
@@ -884,40 +952,40 @@ const specialWorkspace =
           <CommsTrainingPanel scenarioId={currentStep.scenario} onComplete={markCommsStepComplete} />
         </div>)}
 
-        {/* ====================================================
+      {/* ====================================================
     AVIONICS
     ==================================================== */}
 
-{currentStep?.type ===
-  "avionics" && (
-  <div
-    className="
+      {currentStep?.type ===
+        "avionics" && (
+          <div
+            className="
       touch-scroll
       h-full
       min-h-0
       overflow-y-auto
       p-2
     "
-  >
-    <AvionicsPanel
-      task={
-        currentStep.task
-      }
+          >
+            <AvionicsPanel
+              task={
+                currentStep.task
+              }
 
-      radioPowered={
-        controls.radio === "ON"
-      }
+              radioPowered={
+                controls.radio === "ON"
+              }
 
-      transponderMode={
-        controls.transponder
-      }
+              transponderMode={
+                controls.transponder
+              }
 
-      onDone={
-        markAvionicsStepComplete
-      }
-    />
-  </div>
-)}
+              onDone={
+                markAvionicsStepComplete
+              }
+            />
+          </div>
+        )}
       {/* INSTRUMENT / TIMER */}
       {(currentStep?.type ===
         "instrument" ||
